@@ -578,10 +578,12 @@ function gameLoop(timestamp) {
 }
 
 window.addEventListener("keydown", (e) => {
+  const key = e.key.toLowerCase();
+
   if (gameState === STATE.PLAYING) {
-    if (e.key === "ArrowLeft" || e.key === "a") {
+    if (e.key === "ArrowLeft" || key === "a") {
       if (currentLane > 0) currentLane--;
-    } else if (e.key === "ArrowRight" || e.key === "d") {
+    } else if (e.key === "ArrowRight" || key === "d") {
       if (currentLane < 2) currentLane++;
     }
   }
@@ -589,7 +591,7 @@ window.addEventListener("keydown", (e) => {
     if (gameState === STATE.START || gameState === STATE.WIN) startGame(1);
     else if (gameState === STATE.GAME_OVER) startGame(currentLevel);
   }
-  if (e.key === "m" || e.key === "M") toggleMute();
+  if (key === "m") toggleMute();
 });
 
 function handlePointer(x, y) {
