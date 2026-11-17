@@ -158,7 +158,6 @@ function startGame(level = 1) {
   setState(STATE.PLAYING);
   
   startBgm();
-  gameLoop();
 }
 
 function endGame(state) {
@@ -557,7 +556,7 @@ function draw() {
 function gameLoop() {
   if (gameState === STATE.PLAYING) update();
   draw();
-  if (gameState !== "STOP") requestAnimationFrame(gameLoop);
+  requestAnimationFrame(gameLoop);
 }
 
 window.addEventListener("keydown", (e) => {
@@ -615,4 +614,4 @@ canvas.addEventListener("touchstart", (e) => {
   handlePointer(x, y);
 }, { passive: false });
 
-draw();
+gameLoop();
