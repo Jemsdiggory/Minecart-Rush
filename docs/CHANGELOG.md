@@ -1,5 +1,14 @@
 ﻿# Changelog Minecart Rush
 
+## Kecepatan Game Stabil di Semua Refresh Rate
+
+Branch: `feat/fixed-timestep` | Tanggal: 2026-11-17
+
+- Masalah/tujuan: Kecepatan game mengikuti refresh rate layar, jadi gameplay lebih cepat di monitor 120Hz atau 144Hz.
+- Perubahan: Update game berjalan tetap 60 tick per detik, delta waktu dibatasi 250 ms, dan timer direset saat mulai level.
+- Cara uji: Ukur waktu Level 1 sampai 500 m (sekitar 36 detik), ulangi di layar 120Hz/144Hz bila ada, lalu pindah tab 10 detik dan pastikan game tidak melompat jauh.
+
+
 ## Perbaiki Game Loop dan State
 
 Branch: `fix/game-loop-state` | Tanggal: 2026-11-17
