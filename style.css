@@ -1,0 +1,136 @@
+:root {
+  --bg-dark: #121010;
+  --panel-bg: #2B2118;
+  --gold: #FFD700;
+  --iron: #757575;
+  --danger: #E63946;
+  --wood: #5C4033;
+  --text-light: #F1F1F1;
+}
+
+* {
+  box-sizing: border-box;
+  touch-action: manipulation;
+}
+
+body {
+  margin: 0;
+  padding: 10px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-dark);
+  color: var(--text-light);
+  font-family: 'Rubik', sans-serif;
+}
+
+.topbar {
+  width: 100%;
+  max-width: 600px;
+  padding: 12px 16px;
+  background: #1C1510;
+  border: 3px solid var(--wood);
+  border-bottom: none;
+  text-align: center;
+  border-radius: 12px 12px 0 0;
+}
+
+.tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 4px;
+  background: var(--gold);
+  color: #121010;
+  font-size: 0.75em;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
+h1 {
+  margin: 6px 0 0;
+  font-family: 'Black Ops One', cursive;
+  font-size: clamp(1.8em, 6vw, 2.5em);
+  color: var(--text-light);
+  text-shadow: 2px 2px 0 var(--wood);
+  letter-spacing: 2px;
+}
+
+.card {
+  width: 100%;
+  max-width: 600px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  background: var(--panel-bg);
+  border: 3px solid var(--wood);
+  border-top: none;
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.8);
+}
+
+.canvas-container {
+  width: 100%;
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  max-width: 600px;
+  height: auto;
+  aspect-ratio: 600 / 800;
+  border-radius: 8px;
+  background-color: #1A1412;
+  border: 3px solid var(--iron);
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.9);
+}
+
+.info {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+.chip {
+  padding: 6px 14px;
+  border-radius: 4px;
+  background: #1C1510;
+  border: 1px solid var(--iron);
+  color: var(--text-light);
+  font-size: 0.85em;
+  font-weight: 700;
+}
+
+#message:empty {
+  display: none;
+}
+
+#message {
+  padding: 6px 14px;
+  border-radius: 4px;
+  background: var(--danger);
+  color: #fff;
+  font-weight: bold;
+  font-size: 0.85em;
+  animation: shake 0.3s ease-in-out infinite alternate;
+}
+
+@keyframes shake {
+  from { transform: translateX(-2px); }
+  to { transform: translateX(2px); }
+}
+
+.caption {
+  margin: 0;
+  color: #A0A0A0;
+  text-align: center;
+  font-size: 0.85em;
+}

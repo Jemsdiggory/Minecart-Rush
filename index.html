@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Minecart Rush</title>
+
+  <!-- Google Fonts: Rubik & Black Ops One untuk kesan industrial/tambang -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Rubik:wght@400;700;900&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <header class="topbar">
+    <span class="tag">TAMBANG EMAS BAWAH TANAH</span>
+    <h1>MINECART RUSH</h1>
+  </header>
+
+  <main class="card">
+    <div class="canvas-container">
+      <canvas id="gameCanvas" width="600" height="800"></canvas>
+    </div>
+
+    <div class="info">
+      <span class="chip">🕹️ Kiri/Kanan atau Sentuh Sisi Layar</span>
+      <span class="chip">M: Mute</span>
+      <span id="message"></span>
+    </div>
+
+    <p class="caption">Kumpulkan Emas 💎, Hindari Batu 🪨 & Rel Rusak 🚧!</p>
+  </main>
+
+  <script src="game.js"></script>
+</body>
+</html>
