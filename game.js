@@ -583,7 +583,7 @@ window.addEventListener("keydown", (e) => {
     e.preventDefault();
   }
 
-  if (gameState === STATE.PLAYING) {
+  if (gameState === STATE.PLAYING && !e.repeat) {
     if (e.key === "ArrowLeft" || key === "a") {
       if (currentLane > 0) currentLane--;
     } else if (e.key === "ArrowRight" || key === "d") {
