@@ -577,6 +577,11 @@ function gameLoop(timestamp) {
   requestAnimationFrame(gameLoop);
 }
 
+function moveLane(direction) {
+  const nextLane = currentLane + direction;
+  if (nextLane >= 0 && nextLane < LANES.length) currentLane = nextLane;
+}
+
 window.addEventListener("keydown", (e) => {
   const key = e.key.toLowerCase();
   if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key) || e.code === "Space") {
@@ -585,9 +590,9 @@ window.addEventListener("keydown", (e) => {
 
   if (gameState === STATE.PLAYING && !e.repeat) {
     if (e.key === "ArrowLeft" || key === "a") {
-      if (currentLane > 0) currentLane--;
+      moveLane(-1);
     } else if (e.key === "ArrowRight" || key === "d") {
-      if (currentLane < 2) currentLane++;
+      moveLane(1);
     }
   }
   if (e.key === "Enter") {
@@ -613,11 +618,7 @@ function handlePointer(x, y) {
   }
 
   if (gameState === STATE.PLAYING) {
-    if (x < W / 2) {
-      if (currentLane > 0) currentLane--;
-    } else {
-      if (currentLane < 2) currentLane++;
-    }
+    moveLane(x < W / 2 ? -1 : 1);
   }
 }
 
