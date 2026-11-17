@@ -57,6 +57,11 @@ function setState(newState) {
   gameState = newState;
 }
 
+function resetTimer() {
+  accumulator = 0;
+  lastTime = null;
+}
+
 // Audio 
 let audioCtx = null;
 let masterGain = null;
@@ -145,6 +150,7 @@ function toggleMute() {
 }
 
 function startGame(level = 1) {
+  resetTimer();
   currentLevel = level;
   currentLane = 1;
   player.x = LANES[currentLane];
@@ -558,7 +564,7 @@ function draw() {
 
 function gameLoop(timestamp) {
   if (lastTime === null) lastTime = timestamp;
-  const delta = timestamp - lastTime;
+  const delta = Math.min(timestamp - lastTime, 250);
   lastTime = timestamp;
   accumulator += delta;
 
