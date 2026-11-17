@@ -1,5 +1,14 @@
 ﻿# Changelog Minecart Rush
 
+## Rapikan Kontrol Keyboard
+
+Branch: `fix/input-keyboard` | Tanggal: 2026-11-17
+
+- Masalah/tujuan: Bikin kontrol keyboard tetap konsisten saat Caps Lock aktif, tidak menggeser halaman, dan tidak mengulang pindah jalur saat tombol ditahan.
+- Perubahan: A/D/M menerima huruf besar-kecil, tombol panah dan Space menahan scroll, event repeat diabaikan untuk gerak jalur, dan input keyboard/sentuhan memakai fungsi moveLane yang sama.
+- Cara uji: Nyalakan Caps Lock lalu tekan A/D; perkecil jendela dan tekan panah; tahan panah kanan; lalu coba sentuh sisi kiri/kanan layar di HP.
+
+
 ## Kecepatan Game Stabil di Semua Refresh Rate
 
 Branch: `feat/fixed-timestep` | Tanggal: 2026-11-17
