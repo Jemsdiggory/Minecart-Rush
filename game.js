@@ -579,6 +579,9 @@ function gameLoop(timestamp) {
 
 window.addEventListener("keydown", (e) => {
   const key = e.key.toLowerCase();
+  if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key) || e.code === "Space") {
+    e.preventDefault();
+  }
 
   if (gameState === STATE.PLAYING) {
     if (e.key === "ArrowLeft" || key === "a") {
