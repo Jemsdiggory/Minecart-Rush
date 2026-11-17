@@ -6,6 +6,14 @@ const H = canvas.height;
 const FONT_UI = "'Rubik', sans-serif";
 const FONT_TITLE = "'Black Ops One', cursive";
 
+const STATE = {
+  START: "START",
+  PLAYING: "PLAYING",
+  LEVEL_COMPLETE: "LEVEL_COMPLETE",
+  GAME_OVER: "GAME_OVER",
+  WIN: "WIN"
+};
+
 // Definisi 3 Jalur (Lanes)
 const LANES = [100, 300, 500]; 
 let currentLane = 1; // 0: Kiri, 1: Tengah, 2: Kanan
@@ -22,7 +30,7 @@ let score = 0;
 let distance = 0;
 let lives = 3;
 let highScore = Number(localStorage.getItem("highScore_minecart")) || 0;
-let gameState = "START"; 
+let gameState = STATE.START;
 let muted = false;
 let messageTimer = 0;
 let frameCount = 0;
@@ -41,6 +49,10 @@ let items = [];
 let popups = [];
 let sparks = []; // Partikel percikan roda
 const keysPressed = {};
+
+function setState(newState) {
+  gameState = newState;
+}
 
 // Audio 
 let audioCtx = null;
@@ -143,14 +155,14 @@ function startGame(level = 1) {
   sparks = [];
   frameCount = 0;
   messageTimer = 0;
-  gameState = "PLAYING";
+  setState(STATE.PLAYING);
   
   startBgm();
   gameLoop();
 }
 
 function endGame(state) {
-  gameState = state;
+  setState(state);
   stopBgm();
   
   if (score > highScore) {
@@ -158,7 +170,7 @@ function endGame(state) {
     localStorage.setItem("highScore_minecart", highScore);
   }
   
-  if (state === "WIN") playLevelUpSound();
+  if (state === STATE.WIN) playLevelUpSound();
 }
 
 function spawnItem() {
@@ -189,7 +201,7 @@ function isColliding(rect1, rect2) {
 }
 
 function update() {
-  if (gameState !== "PLAYING") return;
+  if (gameState !== STATE.PLAYING) return;
   
   frameCount++;
   const speed = LEVELS[currentLevel].speed;
@@ -249,7 +261,7 @@ function update() {
         item.markedForDeletion = true;
         
         if (lives <= 0) {
-          endGame("GAME_OVER");
+          endGame(STATE.GAME_OVER);
         }
       }
     }
@@ -262,14 +274,14 @@ function update() {
   const target = LEVELS[currentLevel].target;
   if (distance >= target) {
     if (currentLevel < 3) {
-      gameState = "LEVEL_UP";
+      setState(STATE.LEVEL_COMPLETE);
       playLevelUpSound();
       stopBgm();
       setTimeout(() => {
-        if(gameState === "LEVEL_UP") startGame(currentLevel + 1);
+        if (gameState === STATE.LEVEL_COMPLETE) startGame(currentLevel + 1);
       }, 2000);
     } else {
-      endGame("WIN");
+      endGame(STATE.WIN);
     }
   }
 }
@@ -488,7 +500,7 @@ function drawOverlay(title, subtitle, btnText, btnColor) {
   ctx.font = "16px " + FONT_UI;
   ctx.fillText(subtitle, W/2, H/2 - 20);
   
-  if (gameState === "START" || gameState === "GAME_OVER" || gameState === "WIN") {
+  if (gameState === STATE.START || gameState === STATE.GAME_OVER || gameState === STATE.WIN) {
     ctx.fillStyle = "#A0A0A0";
     ctx.fillText(`🏆 High Score: ${highScore}`, W/2, H/2 + 20);
   }
@@ -516,7 +528,7 @@ function drawMuteBtn() {
 function draw() {
   drawBackground();
   
-  if (gameState === "PLAYING" || gameState === "LEVEL_UP") {
+  if (gameState === STATE.PLAYING || gameState === STATE.LEVEL_COMPLETE) {
     drawSparks();
     drawItems();
     drawPlayer();
@@ -524,13 +536,13 @@ function draw() {
     drawPopups();
   }
 
-  if (gameState === "START") {
+  if (gameState === STATE.START) {
     drawOverlay("MINECART RUSH", "Geser kiri/kanan. Kumpulkan Emas!", "MULAI", "#FFD700");
-  } else if (gameState === "LEVEL_UP") {
+  } else if (gameState === STATE.LEVEL_COMPLETE) {
     drawOverlay("LEVEL SELESAI!", `Bersiap untuk Level ${currentLevel + 1}...`, "", "");
-  } else if (gameState === "GAME_OVER") {
+  } else if (gameState === STATE.GAME_OVER) {
     drawOverlay("KECELAKAAN!", `Jarak: ${Math.floor(distance)}m | Skor: ${score}`, "ULANG LEVEL", "#E63946");
-  } else if (gameState === "WIN") {
+  } else if (gameState === STATE.WIN) {
     drawOverlay("TAMAT!", `Luar Biasa! Total Skor: ${score}`, "MAIN DARI AWAL", "#00F0FF");
   }
 
@@ -543,13 +555,13 @@ function draw() {
 }
 
 function gameLoop() {
-  if (gameState === "PLAYING") update();
+  if (gameState === STATE.PLAYING) update();
   draw();
   if (gameState !== "STOP") requestAnimationFrame(gameLoop);
 }
 
 window.addEventListener("keydown", (e) => {
-  if (gameState === "PLAYING") {
+  if (gameState === STATE.PLAYING) {
     if (e.key === "ArrowLeft" || e.key === "a") {
       if (currentLane > 0) currentLane--;
     } else if (e.key === "ArrowRight" || e.key === "d") {
@@ -557,8 +569,8 @@ window.addEventListener("keydown", (e) => {
     }
   }
   if (e.key === "Enter") {
-    if (gameState === "START" || gameState === "WIN") startGame(1);
-    else if (gameState === "GAME_OVER") startGame(currentLevel); 
+    if (gameState === STATE.START || gameState === STATE.WIN) startGame(1);
+    else if (gameState === STATE.GAME_OVER) startGame(currentLevel);
   }
   if (e.key === "m" || e.key === "M") toggleMute();
 });
@@ -569,16 +581,16 @@ function handlePointer(x, y) {
     return;
   }
 
-  if (gameState === "START" || gameState === "WIN") {
+  if (gameState === STATE.START || gameState === STATE.WIN) {
     startGame(1);
     return;
   }
-  if (gameState === "GAME_OVER") {
+  if (gameState === STATE.GAME_OVER) {
     startGame(currentLevel);
     return;
   }
 
-  if (gameState === "PLAYING") {
+  if (gameState === STATE.PLAYING) {
     if (x < W / 2) {
       if (currentLane > 0) currentLane--;
     } else {
