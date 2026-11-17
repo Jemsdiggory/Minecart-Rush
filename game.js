@@ -5,6 +5,7 @@ const H = canvas.height;
 
 const FONT_UI = "'Rubik', sans-serif";
 const FONT_TITLE = "'Black Ops One', cursive";
+const TICK_MS = 1000 / 60;
 
 const STATE = {
   START: "START",
@@ -35,6 +36,8 @@ let muted = false;
 let messageTimer = 0;
 let frameCount = 0;
 let trackOffset = 0;
+let accumulator = 0;
+let lastTime = null;
 
 // Kereta Pemain
 const player = {
@@ -553,8 +556,17 @@ function draw() {
   }
 }
 
-function gameLoop() {
-  if (gameState === STATE.PLAYING) update();
+function gameLoop(timestamp) {
+  if (lastTime === null) lastTime = timestamp;
+  const delta = timestamp - lastTime;
+  lastTime = timestamp;
+  accumulator += delta;
+
+  while (accumulator >= TICK_MS) {
+    if (gameState === STATE.PLAYING) update();
+    accumulator -= TICK_MS;
+  }
+
   draw();
   requestAnimationFrame(gameLoop);
 }
