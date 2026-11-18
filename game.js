@@ -6,6 +6,7 @@ const H = canvas.height;
 const FONT_UI = "'Rubik', sans-serif";
 const FONT_TITLE = "'Black Ops One', cursive";
 const TICK_MS = 1000 / 60;
+const HITBOX_PADDING = 6;
 
 const STATE = {
   START: "START",
@@ -201,19 +202,20 @@ function spawnItem() {
 
 function getPlayerBox() {
   return {
-    left: player.x - player.width / 2,
-    right: player.x + player.width / 2,
-    top: player.y,
-    bottom: player.y + player.height
+    left: player.x - player.width / 2 + HITBOX_PADDING,
+    right: player.x + player.width / 2 - HITBOX_PADDING,
+    top: player.y + HITBOX_PADDING,
+    bottom: player.y + player.height - HITBOX_PADDING
   };
 }
 
 function getItemBox(item) {
+  const padding = item.type === "gold" ? 0 : HITBOX_PADDING;
   return {
-    left: item.x - item.width / 2,
-    right: item.x + item.width / 2,
-    top: item.y - item.height / 2,
-    bottom: item.y + item.height / 2
+    left: item.x - item.width / 2 + padding,
+    right: item.x + item.width / 2 - padding,
+    top: item.y - item.height / 2 + padding,
+    bottom: item.y + item.height / 2 - padding
   };
 }
 
