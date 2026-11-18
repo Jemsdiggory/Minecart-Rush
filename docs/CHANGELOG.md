@@ -1,5 +1,14 @@
 ﻿# Changelog Minecart Rush
 
+## Alur Menu, Level Selesai, Game Over, dan Menang
+
+Branch: `feat/menu-flow` | Tanggal: 2026-11-18
+
+- Masalah/tujuan: Tombol yang digambar belum punya area klik sendiri dan alur antar layar masih loncat otomatis.
+- Perubahan: Tombol canvas sekarang bisa diklik atau disentuh, Level Selesai menunggu pilihan, layar hasil menampilkan statistik, dan Menu Utama bisa dibuka dari layar akhir.
+- Cara uji: Coba mulai dengan klik/Enter/Spasi, lanjut level, lalu uji ulang level, Menu Utama, klik di luar tombol, dan mute di tiap layar.
+
+
 ## Skor Ulang Level dan Statistik Emas
 
 Branch: `fix/score-retry` | Tanggal: 2026-11-18
