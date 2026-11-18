@@ -151,13 +151,17 @@ function toggleMute() {
   if (masterGain) masterGain.gain.value = muted ? 0 : 1;
 }
 
-function startGame(level = 1) {
+function newGame() {
+  score = 0;
+  startLevel(1);
+}
+
+function startLevel(level) {
   resetTimer();
   currentLevel = level;
   currentLane = 1;
   player.x = LANES[currentLane];
   
-  if (level === 1) score = 0; 
   distance = 0;
   lives = 3;
   
@@ -169,6 +173,14 @@ function startGame(level = 1) {
   setState(STATE.PLAYING);
   
   startBgm();
+}
+
+function retryLevel() {
+  startLevel(currentLevel);
+}
+
+function nextLevel() {
+  startLevel(currentLevel + 1);
 }
 
 function endGame(state) {
@@ -307,7 +319,7 @@ function update() {
       playLevelUpSound();
       stopBgm();
       setTimeout(() => {
-        if (gameState === STATE.LEVEL_COMPLETE) startGame(currentLevel + 1);
+        if (gameState === STATE.LEVEL_COMPLETE) nextLevel();
       }, 2000);
     } else {
       endGame(STATE.WIN);
@@ -645,8 +657,8 @@ window.addEventListener("keydown", (e) => {
     }
   }
   if (e.key === "Enter") {
-    if (gameState === STATE.START || gameState === STATE.WIN) startGame(1);
-    else if (gameState === STATE.GAME_OVER) startGame(currentLevel);
+    if (gameState === STATE.START || gameState === STATE.WIN) newGame();
+    else if (gameState === STATE.GAME_OVER) retryLevel();
   }
   if (key === "m") toggleMute();
   if (key === "h" && !e.repeat) debugHitbox = !debugHitbox;
@@ -659,11 +671,11 @@ function handlePointer(x, y) {
   }
 
   if (gameState === STATE.START || gameState === STATE.WIN) {
-    startGame(1);
+    newGame();
     return;
   }
   if (gameState === STATE.GAME_OVER) {
-    startGame(currentLevel);
+    retryLevel();
     return;
   }
 
