@@ -6,6 +6,7 @@ const H = canvas.height;
 const FONT_UI = "'Rubik', sans-serif";
 const FONT_TITLE = "'Black Ops One', cursive";
 const TICK_MS = 1000 / 60;
+const HITBOX_PADDING = 6;
 
 const STATE = {
   START: "START",
@@ -33,6 +34,7 @@ let lives = 3;
 let highScore = Number(localStorage.getItem("highScore_minecart")) || 0;
 let gameState = STATE.START;
 let muted = false;
+let debugHitbox = false;
 let messageTimer = 0;
 let frameCount = 0;
 let trackOffset = 0;
@@ -199,12 +201,31 @@ function spawnItem() {
   }
 }
 
-function isColliding(rect1, rect2) {
+function getPlayerBox() {
+  return {
+    left: player.x - player.width / 2 + HITBOX_PADDING,
+    right: player.x + player.width / 2 - HITBOX_PADDING,
+    top: player.y + HITBOX_PADDING,
+    bottom: player.y + player.height - HITBOX_PADDING
+  };
+}
+
+function getItemBox(item) {
+  const padding = item.type === "gold" ? 0 : HITBOX_PADDING;
+  return {
+    left: item.x - item.width / 2 + padding,
+    right: item.x + item.width / 2 - padding,
+    top: item.y - item.height / 2 + padding,
+    bottom: item.y + item.height / 2 - padding
+  };
+}
+
+function isColliding(box1, box2) {
   return (
-    rect1.x - rect1.width/2 < rect2.x + rect2.width/2 &&
-    rect1.x + rect1.width/2 > rect2.x - rect2.width/2 &&
-    rect1.y < rect2.y + rect2.height &&
-    rect1.y + rect1.height > rect2.y
+    box1.left < box2.right &&
+    box1.right > box2.left &&
+    box1.top < box2.bottom &&
+    box1.bottom > box2.top
   );
 }
 
@@ -255,7 +276,7 @@ function update() {
       item.markedForDeletion = true;
     }
 
-    if (!item.markedForDeletion && isColliding(player, item)) {
+    if (!item.markedForDeletion && isColliding(getPlayerBox(), getItemBox(item))) {
       if (item.type === "gold") {
         score += 15;
         playGoldSound();
@@ -433,6 +454,33 @@ function drawItems() {
   });
 }
 
+function drawHitboxes() {
+  ctx.save();
+  ctx.lineWidth = 2;
+
+  const playerBox = getPlayerBox();
+  ctx.strokeStyle = "#00FF00";
+  ctx.strokeRect(
+    playerBox.left,
+    playerBox.top,
+    playerBox.right - playerBox.left,
+    playerBox.bottom - playerBox.top
+  );
+
+  ctx.strokeStyle = "#FF0000";
+  items.forEach(item => {
+    const itemBox = getItemBox(item);
+    ctx.strokeRect(
+      itemBox.left,
+      itemBox.top,
+      itemBox.right - itemBox.left,
+      itemBox.bottom - itemBox.top
+    );
+  });
+
+  ctx.restore();
+}
+
 function drawHUD() {
   ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
   ctx.fillRect(0, 0, W, 50);
@@ -540,6 +588,7 @@ function draw() {
     drawSparks();
     drawItems();
     drawPlayer();
+    if (debugHitbox) drawHitboxes();
     drawHUD();
     drawPopups();
   }
@@ -600,6 +649,7 @@ window.addEventListener("keydown", (e) => {
     else if (gameState === STATE.GAME_OVER) startGame(currentLevel);
   }
   if (key === "m") toggleMute();
+  if (key === "h" && !e.repeat) debugHitbox = !debugHitbox;
 });
 
 function handlePointer(x, y) {
