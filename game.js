@@ -7,6 +7,7 @@ const FONT_UI = "'Rubik', sans-serif";
 const FONT_TITLE = "'Black Ops One', cursive";
 const TICK_MS = 1000 / 60;
 const HITBOX_PADDING = 6;
+const GOLD_SCORE = 15;
 
 const STATE = {
   START: "START",
@@ -29,6 +30,9 @@ const LEVELS = {
 
 let currentLevel = 1;
 let score = 0;
+let levelStartScore = 0;
+let goldCollected = 0;
+let levelStartGold = 0;
 let distance = 0;
 let lives = 3;
 let highScore = Number(localStorage.getItem("highScore_minecart")) || 0;
@@ -151,13 +155,20 @@ function toggleMute() {
   if (masterGain) masterGain.gain.value = muted ? 0 : 1;
 }
 
-function startGame(level = 1) {
+function newGame() {
+  score = 0;
+  goldCollected = 0;
+  startLevel(1);
+}
+
+function startLevel(level) {
   resetTimer();
   currentLevel = level;
+  levelStartScore = score;
+  levelStartGold = goldCollected;
   currentLane = 1;
   player.x = LANES[currentLane];
   
-  if (level === 1) score = 0; 
   distance = 0;
   lives = 3;
   
@@ -171,11 +182,21 @@ function startGame(level = 1) {
   startBgm();
 }
 
+function retryLevel() {
+  score = levelStartScore;
+  goldCollected = levelStartGold;
+  startLevel(currentLevel);
+}
+
+function nextLevel() {
+  startLevel(currentLevel + 1);
+}
+
 function endGame(state) {
   setState(state);
   stopBgm();
   
-  if (score > highScore) {
+  if ((state === STATE.GAME_OVER || state === STATE.WIN) && score > highScore) {
     highScore = score;
     localStorage.setItem("highScore_minecart", highScore);
   }
@@ -278,9 +299,10 @@ function update() {
 
     if (!item.markedForDeletion && isColliding(getPlayerBox(), getItemBox(item))) {
       if (item.type === "gold") {
-        score += 15;
+        score += GOLD_SCORE;
+        goldCollected++;
         playGoldSound();
-        popups.push({ x: item.x, y: player.y - 20, text: "+15", life: 30, color: "#FFD700" });
+        popups.push({ x: item.x, y: player.y - 20, text: `+${GOLD_SCORE}`, life: 30, color: "#FFD700" });
         item.markedForDeletion = true;
       } else if (player.invulnerable === 0) {
         lives--;
@@ -307,7 +329,7 @@ function update() {
       playLevelUpSound();
       stopBgm();
       setTimeout(() => {
-        if (gameState === STATE.LEVEL_COMPLETE) startGame(currentLevel + 1);
+        if (gameState === STATE.LEVEL_COMPLETE) nextLevel();
       }, 2000);
     } else {
       endGame(STATE.WIN);
@@ -598,9 +620,9 @@ function draw() {
   } else if (gameState === STATE.LEVEL_COMPLETE) {
     drawOverlay("LEVEL SELESAI!", `Bersiap untuk Level ${currentLevel + 1}...`, "", "");
   } else if (gameState === STATE.GAME_OVER) {
-    drawOverlay("KECELAKAAN!", `Jarak: ${Math.floor(distance)}m | Skor: ${score}`, "ULANG LEVEL", "#E63946");
+    drawOverlay("KECELAKAAN!", `Jarak: ${Math.floor(distance)}m | Emas: ${goldCollected} | Skor: ${score}`, "ULANG LEVEL", "#E63946");
   } else if (gameState === STATE.WIN) {
-    drawOverlay("TAMAT!", `Luar Biasa! Total Skor: ${score}`, "MAIN DARI AWAL", "#00F0FF");
+    drawOverlay("TAMAT!", `Jarak: ${Math.floor(distance)}m | Emas: ${goldCollected} | Skor: ${score}`, "MAIN DARI AWAL", "#00F0FF");
   }
 
   drawMuteBtn();
@@ -645,8 +667,8 @@ window.addEventListener("keydown", (e) => {
     }
   }
   if (e.key === "Enter") {
-    if (gameState === STATE.START || gameState === STATE.WIN) startGame(1);
-    else if (gameState === STATE.GAME_OVER) startGame(currentLevel);
+    if (gameState === STATE.START || gameState === STATE.WIN) newGame();
+    else if (gameState === STATE.GAME_OVER) retryLevel();
   }
   if (key === "m") toggleMute();
   if (key === "h" && !e.repeat) debugHitbox = !debugHitbox;
@@ -659,11 +681,11 @@ function handlePointer(x, y) {
   }
 
   if (gameState === STATE.START || gameState === STATE.WIN) {
-    startGame(1);
+    newGame();
     return;
   }
   if (gameState === STATE.GAME_OVER) {
-    startGame(currentLevel);
+    retryLevel();
     return;
   }
 
