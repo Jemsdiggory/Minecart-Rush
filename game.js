@@ -29,6 +29,7 @@ const LEVELS = {
 
 let currentLevel = 1;
 let score = 0;
+let levelStartScore = 0;
 let distance = 0;
 let lives = 3;
 let highScore = Number(localStorage.getItem("highScore_minecart")) || 0;
@@ -159,6 +160,7 @@ function newGame() {
 function startLevel(level) {
   resetTimer();
   currentLevel = level;
+  levelStartScore = score;
   currentLane = 1;
   player.x = LANES[currentLane];
   
@@ -176,6 +178,7 @@ function startLevel(level) {
 }
 
 function retryLevel() {
+  score = levelStartScore;
   startLevel(currentLevel);
 }
 
@@ -187,7 +190,7 @@ function endGame(state) {
   setState(state);
   stopBgm();
   
-  if (score > highScore) {
+  if ((state === STATE.GAME_OVER || state === STATE.WIN) && score > highScore) {
     highScore = score;
     localStorage.setItem("highScore_minecart", highScore);
   }
