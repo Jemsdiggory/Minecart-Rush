@@ -7,6 +7,7 @@ const FONT_UI = "'Rubik', sans-serif";
 const FONT_TITLE = "'Black Ops One', cursive";
 const TICK_MS = 1000 / 60;
 const HITBOX_PADDING = 6;
+const GOLD_SCORE = 15;
 
 const STATE = {
   START: "START",
@@ -30,6 +31,8 @@ const LEVELS = {
 let currentLevel = 1;
 let score = 0;
 let levelStartScore = 0;
+let goldCollected = 0;
+let levelStartGold = 0;
 let distance = 0;
 let lives = 3;
 let highScore = Number(localStorage.getItem("highScore_minecart")) || 0;
@@ -154,6 +157,7 @@ function toggleMute() {
 
 function newGame() {
   score = 0;
+  goldCollected = 0;
   startLevel(1);
 }
 
@@ -161,6 +165,7 @@ function startLevel(level) {
   resetTimer();
   currentLevel = level;
   levelStartScore = score;
+  levelStartGold = goldCollected;
   currentLane = 1;
   player.x = LANES[currentLane];
   
@@ -179,6 +184,7 @@ function startLevel(level) {
 
 function retryLevel() {
   score = levelStartScore;
+  goldCollected = levelStartGold;
   startLevel(currentLevel);
 }
 
@@ -293,9 +299,10 @@ function update() {
 
     if (!item.markedForDeletion && isColliding(getPlayerBox(), getItemBox(item))) {
       if (item.type === "gold") {
-        score += 15;
+        score += GOLD_SCORE;
+        goldCollected++;
         playGoldSound();
-        popups.push({ x: item.x, y: player.y - 20, text: "+15", life: 30, color: "#FFD700" });
+        popups.push({ x: item.x, y: player.y - 20, text: `+${GOLD_SCORE}`, life: 30, color: "#FFD700" });
         item.markedForDeletion = true;
       } else if (player.invulnerable === 0) {
         lives--;
@@ -613,9 +620,9 @@ function draw() {
   } else if (gameState === STATE.LEVEL_COMPLETE) {
     drawOverlay("LEVEL SELESAI!", `Bersiap untuk Level ${currentLevel + 1}...`, "", "");
   } else if (gameState === STATE.GAME_OVER) {
-    drawOverlay("KECELAKAAN!", `Jarak: ${Math.floor(distance)}m | Skor: ${score}`, "ULANG LEVEL", "#E63946");
+    drawOverlay("KECELAKAAN!", `Jarak: ${Math.floor(distance)}m | Emas: ${goldCollected} | Skor: ${score}`, "ULANG LEVEL", "#E63946");
   } else if (gameState === STATE.WIN) {
-    drawOverlay("TAMAT!", `Luar Biasa! Total Skor: ${score}`, "MAIN DARI AWAL", "#00F0FF");
+    drawOverlay("TAMAT!", `Jarak: ${Math.floor(distance)}m | Emas: ${goldCollected} | Skor: ${score}`, "MAIN DARI AWAL", "#00F0FF");
   }
 
   drawMuteBtn();
