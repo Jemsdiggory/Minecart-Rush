@@ -1,5 +1,14 @@
 ﻿# Changelog Minecart Rush
 
+## Skor Ulang Level dan Statistik Emas
+
+Branch: `fix/score-retry` | Tanggal: 2026-11-18
+
+- Masalah/tujuan: Skor dari percobaan gagal kebawa saat ulang level dan bikin catatan skor jadi keliru.
+- Perubahan: Retry mengembalikan skor dan jumlah emas ke awal level, mulai baru mereset semuanya, dan hasil akhir menampilkan jarak serta emas yang terkumpul.
+- Cara uji: Selesaikan Level 1 dengan 150 poin, kumpulkan sampai 240 di Level 2 lalu kalah. Retry harus balik ke 150. Menang lalu mulai lagi; skor dan emas harus mulai dari nol.
+
+
 ## Hitbox Sesuai Posisi Gambar
 
 Branch: `fix/collision-hitbox` | Tanggal: 2026-11-18
