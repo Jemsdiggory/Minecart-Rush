@@ -329,9 +329,6 @@ function update() {
       setState(STATE.LEVEL_COMPLETE);
       playLevelUpSound();
       stopBgm();
-      setTimeout(() => {
-        if (gameState === STATE.LEVEL_COMPLETE) nextLevel();
-      }, 2000);
     } else {
       endGame(STATE.WIN);
     }
@@ -565,6 +562,7 @@ function drawButton(x, y, text, color, action) {
 
 function getPrimaryAction() {
   if (gameState === STATE.START || gameState === STATE.WIN) return newGame;
+  if (gameState === STATE.LEVEL_COMPLETE) return nextLevel;
   if (gameState === STATE.GAME_OVER) return retryLevel;
   return null;
 }
@@ -642,7 +640,9 @@ function draw() {
       { text: "MULAI", color: "#FFD700", action: newGame }
     ]);
   } else if (gameState === STATE.LEVEL_COMPLETE) {
-    drawOverlay("LEVEL SELESAI!", `Bersiap untuk Level ${currentLevel + 1}...`);
+    drawOverlay(`LEVEL ${currentLevel} SELESAI`, `Jarak level ini: ${Math.floor(distance)}m\nTotal emas: ${goldCollected} | Skor: ${score}`, [
+      { text: "LEVEL BERIKUTNYA", color: "#FFD700", action: nextLevel }
+    ]);
   } else if (gameState === STATE.GAME_OVER) {
     drawOverlay("KECELAKAAN!", `Jarak: ${Math.floor(distance)}m | Emas: ${goldCollected} | Skor: ${score}`, [
       { text: "ULANG LEVEL", color: "#E63946", action: retryLevel }
