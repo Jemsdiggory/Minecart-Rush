@@ -34,6 +34,8 @@ let levelStartScore = 0;
 let goldCollected = 0;
 let levelStartGold = 0;
 let distance = 0;
+let totalDistance = 0;
+let levelStartTotalDistance = 0;
 let lives = 3;
 let highScore = Number(localStorage.getItem("highScore_minecart")) || 0;
 let gameState = STATE.START;
@@ -159,6 +161,7 @@ function toggleMute() {
 function newGame() {
   score = 0;
   goldCollected = 0;
+  totalDistance = 0;
   startLevel(1);
 }
 
@@ -167,6 +170,7 @@ function startLevel(level) {
   currentLevel = level;
   levelStartScore = score;
   levelStartGold = goldCollected;
+  levelStartTotalDistance = totalDistance;
   currentLane = 1;
   player.x = LANES[currentLane];
   
@@ -186,11 +190,17 @@ function startLevel(level) {
 function retryLevel() {
   score = levelStartScore;
   goldCollected = levelStartGold;
+  totalDistance = levelStartTotalDistance;
   startLevel(currentLevel);
 }
 
 function nextLevel() {
   startLevel(currentLevel + 1);
+}
+
+function goToMenu() {
+  stopBgm();
+  setState(STATE.START);
 }
 
 function endGame(state) {
@@ -258,6 +268,7 @@ function update() {
   const speed = LEVELS[currentLevel].speed;
   
   distance += speed / 30; 
+  totalDistance += speed / 30;
   
   trackOffset += speed;
   if (trackOffset > 100) trackOffset = 0;
@@ -641,15 +652,18 @@ function draw() {
     ]);
   } else if (gameState === STATE.LEVEL_COMPLETE) {
     drawOverlay(`LEVEL ${currentLevel} SELESAI`, `Jarak level ini: ${Math.floor(distance)}m\nTotal emas: ${goldCollected} | Skor: ${score}`, [
-      { text: "LEVEL BERIKUTNYA", color: "#FFD700", action: nextLevel }
+      { text: "LEVEL BERIKUTNYA", color: "#FFD700", action: nextLevel },
+      { text: "MENU UTAMA", color: "#00F0FF", action: goToMenu }
     ]);
   } else if (gameState === STATE.GAME_OVER) {
-    drawOverlay("KECELAKAAN!", `Jarak: ${Math.floor(distance)}m | Emas: ${goldCollected} | Skor: ${score}`, [
-      { text: "ULANG LEVEL", color: "#E63946", action: retryLevel }
+    drawOverlay("KECELAKAAN!", `Jarak level ini: ${Math.floor(distance)}m\nTotal emas: ${goldCollected} | Skor: ${score}\nHigh score: ${highScore}`, [
+      { text: "ULANG LEVEL", color: "#E63946", action: retryLevel },
+      { text: "MENU UTAMA", color: "#00F0FF", action: goToMenu }
     ]);
   } else if (gameState === STATE.WIN) {
-    drawOverlay("TAMAT!", `Jarak: ${Math.floor(distance)}m | Emas: ${goldCollected} | Skor: ${score}`, [
-      { text: "MAIN DARI AWAL", color: "#00F0FF", action: newGame }
+    drawOverlay("TAMAT!", `Jarak tempuh: ${Math.floor(totalDistance)}m\nTotal emas: ${goldCollected} | Skor: ${score}\nHigh score: ${highScore}`, [
+      { text: "MAIN LAGI", color: "#00F0FF", action: newGame },
+      { text: "MENU UTAMA", color: "#FFD700", action: goToMenu }
     ]);
   }
 
@@ -698,6 +712,8 @@ window.addEventListener("keydown", (e) => {
     const action = getPrimaryAction();
     if (action) action();
   }
+  if (key === "r" && gameState === STATE.GAME_OVER) retryLevel();
+  if (key === "q" && [STATE.LEVEL_COMPLETE, STATE.GAME_OVER, STATE.WIN].includes(gameState)) goToMenu();
   if (key === "m") toggleMute();
   if (key === "h" && !e.repeat) debugHitbox = !debugHitbox;
 });
