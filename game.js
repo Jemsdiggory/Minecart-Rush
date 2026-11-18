@@ -58,6 +58,7 @@ let items = [];
 let popups = [];
 let sparks = []; // Partikel percikan roda
 const keysPressed = {};
+let uiButtons = [];
 
 function setState(newState) {
   gameState = newState;
@@ -546,23 +547,38 @@ function drawPopups() {
 
 const btnW = 200, btnH = 50;
 
-function drawButton(y, text, color) {
-  roundRect(W/2 - btnW/2, y, btnW, btnH, 8);
+function registerUiButton(x, y, w, h, action) {
+  uiButtons.push({ x, y, w, h, action });
+}
+
+function drawButton(x, y, text, color, action) {
+  roundRect(x, y, btnW, btnH, 8);
   ctx.fillStyle = color;
   ctx.fill();
   ctx.fillStyle = "#121010";
   ctx.font = "bold 20px " + FONT_UI;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(text, W/2, y + btnH/2);
+  ctx.fillText(text, x + btnW / 2, y + btnH/2);
+  registerUiButton(x, y, btnW, btnH, action);
 }
 
-function drawOverlay(title, subtitle, btnText, btnColor) {
+function getPrimaryAction() {
+  if (gameState === STATE.START || gameState === STATE.WIN) return newGame;
+  if (gameState === STATE.GAME_OVER) return retryLevel;
+  return null;
+}
+
+function drawOverlay(title, subtitle, buttons = []) {
   ctx.fillStyle = "rgba(18, 16, 16, 0.85)";
   ctx.fillRect(0, 0, W, H);
 
   ctx.save();
-  roundRect(W/2 - 200, H/2 - 150, 400, 300, 16);
+  const subtitleLines = subtitle.split("\n");
+  const showHighScore = gameState === STATE.START;
+  const overlayHeight = Math.max(300, 220 + subtitleLines.length * 23 + buttons.length * 62 + (showHighScore ? 20 : 0));
+  const overlayTop = H / 2 - overlayHeight / 2;
+  roundRect(W/2 - 200, overlayTop, 400, overlayHeight, 16);
   ctx.fillStyle = "#2B2118";
   ctx.fill();
   ctx.strokeStyle = "#FFD700";
@@ -572,18 +588,22 @@ function drawOverlay(title, subtitle, btnText, btnColor) {
   ctx.fillStyle = "#FFD700";
   ctx.font = "bold 36px " + FONT_TITLE;
   ctx.textAlign = "center";
-  ctx.fillText(title, W/2, H/2 - 70);
+  ctx.fillText(title, W/2, overlayTop + 70);
 
   ctx.fillStyle = "#F1F1F1";
   ctx.font = "16px " + FONT_UI;
-  ctx.fillText(subtitle, W/2, H/2 - 20);
+  const subtitleY = overlayTop + 125;
+  subtitleLines.forEach((line, index) => ctx.fillText(line, W/2, subtitleY + index * 23));
   
-  if (gameState === STATE.START || gameState === STATE.GAME_OVER || gameState === STATE.WIN) {
+  if (showHighScore) {
     ctx.fillStyle = "#A0A0A0";
-    ctx.fillText(`🏆 High Score: ${highScore}`, W/2, H/2 + 20);
+    ctx.fillText(`🏆 High Score: ${highScore}`, W/2, subtitleY + subtitleLines.length * 23);
   }
 
-  if (btnText) drawButton(H/2 + 60, btnText, btnColor);
+  const buttonStartY = overlayTop + overlayHeight - 40 - btnH - Math.max(0, buttons.length - 1) * 62;
+  buttons.forEach((button, index) => {
+    drawButton(W / 2 - btnW / 2, buttonStartY + index * 62, button.text, button.color, button.action);
+  });
   ctx.restore();
 }
 
@@ -601,9 +621,11 @@ function drawMuteBtn() {
   ctx.textBaseline = "middle";
   ctx.fillText(muted ? "🔇 Suara OFF" : "🔊 Suara ON", W - 70, H - 25);
   ctx.restore();
+  registerUiButton(W - 120, H - 40, 100, 30, toggleMute);
 }
 
 function draw() {
+  uiButtons = [];
   drawBackground();
   
   if (gameState === STATE.PLAYING || gameState === STATE.LEVEL_COMPLETE) {
@@ -616,13 +638,19 @@ function draw() {
   }
 
   if (gameState === STATE.START) {
-    drawOverlay("MINECART RUSH", "Geser kiri/kanan. Kumpulkan Emas!", "MULAI", "#FFD700");
+    drawOverlay("MINECART RUSH", "Geser kiri/kanan. Kumpulkan Emas!", [
+      { text: "MULAI", color: "#FFD700", action: newGame }
+    ]);
   } else if (gameState === STATE.LEVEL_COMPLETE) {
-    drawOverlay("LEVEL SELESAI!", `Bersiap untuk Level ${currentLevel + 1}...`, "", "");
+    drawOverlay("LEVEL SELESAI!", `Bersiap untuk Level ${currentLevel + 1}...`);
   } else if (gameState === STATE.GAME_OVER) {
-    drawOverlay("KECELAKAAN!", `Jarak: ${Math.floor(distance)}m | Emas: ${goldCollected} | Skor: ${score}`, "ULANG LEVEL", "#E63946");
+    drawOverlay("KECELAKAAN!", `Jarak: ${Math.floor(distance)}m | Emas: ${goldCollected} | Skor: ${score}`, [
+      { text: "ULANG LEVEL", color: "#E63946", action: retryLevel }
+    ]);
   } else if (gameState === STATE.WIN) {
-    drawOverlay("TAMAT!", `Jarak: ${Math.floor(distance)}m | Emas: ${goldCollected} | Skor: ${score}`, "MAIN DARI AWAL", "#00F0FF");
+    drawOverlay("TAMAT!", `Jarak: ${Math.floor(distance)}m | Emas: ${goldCollected} | Skor: ${score}`, [
+      { text: "MAIN DARI AWAL", color: "#00F0FF", action: newGame }
+    ]);
   }
 
   drawMuteBtn();
@@ -666,27 +694,20 @@ window.addEventListener("keydown", (e) => {
       moveLane(1);
     }
   }
-  if (e.key === "Enter") {
-    if (gameState === STATE.START || gameState === STATE.WIN) newGame();
-    else if (gameState === STATE.GAME_OVER) retryLevel();
+  if (e.key === "Enter" || e.code === "Space") {
+    const action = getPrimaryAction();
+    if (action) action();
   }
   if (key === "m") toggleMute();
   if (key === "h" && !e.repeat) debugHitbox = !debugHitbox;
 });
 
 function handlePointer(x, y) {
-  if (x >= W - 120 && x <= W - 20 && y >= H - 40 && y <= H - 10) {
-    toggleMute();
-    return;
-  }
-
-  if (gameState === STATE.START || gameState === STATE.WIN) {
-    newGame();
-    return;
-  }
-  if (gameState === STATE.GAME_OVER) {
-    retryLevel();
-    return;
+  for (const button of uiButtons) {
+    if (x >= button.x && x <= button.x + button.w && y >= button.y && y <= button.y + button.h) {
+      button.action();
+      return;
+    }
   }
 
   if (gameState === STATE.PLAYING) {
