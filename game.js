@@ -200,6 +200,12 @@ function nextLevel() {
 
 function goToMenu() {
   stopBgm();
+  items = [];
+  popups = [];
+  sparks = [];
+  currentLane = 1;
+  player.x = LANES[currentLane];
+  messageTimer = 0;
   setState(STATE.START);
 }
 
@@ -637,7 +643,7 @@ function draw() {
   uiButtons = [];
   drawBackground();
   
-  if (gameState === STATE.PLAYING || gameState === STATE.LEVEL_COMPLETE) {
+  if ([STATE.PLAYING, STATE.LEVEL_COMPLETE, STATE.GAME_OVER, STATE.WIN].includes(gameState)) {
     drawSparks();
     drawItems();
     drawPlayer();
@@ -708,11 +714,11 @@ window.addEventListener("keydown", (e) => {
       moveLane(1);
     }
   }
-  if (e.key === "Enter" || e.code === "Space") {
+  if ((e.key === "Enter" || e.code === "Space") && !e.repeat) {
     const action = getPrimaryAction();
     if (action) action();
   }
-  if (key === "r" && gameState === STATE.GAME_OVER) retryLevel();
+  if (key === "r" && gameState === STATE.GAME_OVER && !e.repeat) retryLevel();
   if (key === "q" && [STATE.LEVEL_COMPLETE, STATE.GAME_OVER, STATE.WIN].includes(gameState)) goToMenu();
   if (key === "m") toggleMute();
   if (key === "h" && !e.repeat) debugHitbox = !debugHitbox;
