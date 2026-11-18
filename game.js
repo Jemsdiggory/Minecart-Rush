@@ -199,12 +199,30 @@ function spawnItem() {
   }
 }
 
-function isColliding(rect1, rect2) {
+function getPlayerBox() {
+  return {
+    left: player.x - player.width / 2,
+    right: player.x + player.width / 2,
+    top: player.y,
+    bottom: player.y + player.height
+  };
+}
+
+function getItemBox(item) {
+  return {
+    left: item.x - item.width / 2,
+    right: item.x + item.width / 2,
+    top: item.y - item.height / 2,
+    bottom: item.y + item.height / 2
+  };
+}
+
+function isColliding(box1, box2) {
   return (
-    rect1.x - rect1.width/2 < rect2.x + rect2.width/2 &&
-    rect1.x + rect1.width/2 > rect2.x - rect2.width/2 &&
-    rect1.y < rect2.y + rect2.height &&
-    rect1.y + rect1.height > rect2.y
+    box1.left < box2.right &&
+    box1.right > box2.left &&
+    box1.top < box2.bottom &&
+    box1.bottom > box2.top
   );
 }
 
@@ -255,7 +273,7 @@ function update() {
       item.markedForDeletion = true;
     }
 
-    if (!item.markedForDeletion && isColliding(player, item)) {
+    if (!item.markedForDeletion && isColliding(getPlayerBox(), getItemBox(item))) {
       if (item.type === "gold") {
         score += 15;
         playGoldSound();
