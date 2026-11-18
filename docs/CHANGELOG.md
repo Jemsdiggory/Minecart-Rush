@@ -1,5 +1,14 @@
 ﻿# Changelog Minecart Rush
 
+## Hitbox Sesuai Posisi Gambar
+
+Branch: `fix/collision-hitbox` | Tanggal: 2026-11-18
+
+- Masalah/tujuan: Hitbox item tadinya bergeser dari gambar, jadi tabrakan terasa telat.
+- Perubahan: Hitbox sekarang mengikuti posisi gambar, player dan rintangan diberi padding 6 px, emas tetap full size, dan tombol H menampilkan kotak debug.
+- Cara uji: Tekan H saat main untuk cek kotaknya, tabrak batu, lalu coba ambil emas dengan sentuhan tipis.
+
+
 ## Rapikan Kontrol Keyboard
 
 Branch: `fix/input-keyboard` | Tanggal: 2026-11-17
