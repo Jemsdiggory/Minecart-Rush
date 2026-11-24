@@ -771,6 +771,14 @@ window.addEventListener("keydown", (e) => {
   if (key === "h" && !e.repeat) debugHitbox = !debugHitbox;
 });
 
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && gameState === STATE.PLAYING) pauseGame();
+});
+
+window.addEventListener("blur", () => {
+  if (gameState === STATE.PLAYING) pauseGame();
+});
+
 function handlePointer(x, y) {
   for (const button of uiButtons) {
     if (x >= button.x && x <= button.x + button.w && y >= button.y && y <= button.y + button.h) {
