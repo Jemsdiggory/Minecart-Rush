@@ -161,6 +161,11 @@ function playHitSound() {
   playTone(100, t + 0.1, 0.3, "square", 0.3);
 }
 
+function playGameOverSound() {
+  const t = getAudio().currentTime;
+  [440, 349.23, 293.66, 220].forEach((f, i) => playTone(f, t + i * 0.16, 0.2, "sawtooth", 0.2));
+}
+
 function playLevelUpSound() {
   const t = getAudio().currentTime;
   [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => playTone(f, t + i * 0.15, 0.3, "square", 0.2));
@@ -232,6 +237,7 @@ function endGame(state) {
     localStorage.setItem("highScore_minecart", highScore);
   }
   
+  if (state === STATE.GAME_OVER) playGameOverSound();
   if (state === STATE.WIN) playLevelUpSound();
 }
 
