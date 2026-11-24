@@ -694,6 +694,7 @@ function draw() {
   }
 
   drawMuteBtn();
+  if (gameState === STATE.PLAYING) drawPauseBtn();
 
   const msgEl = document.getElementById("message");
   if (msgEl) {
@@ -719,6 +720,23 @@ function gameLoop(timestamp) {
 function moveLane(direction) {
   const nextLane = currentLane + direction;
   if (nextLane >= 0 && nextLane < LANES.length) currentLane = nextLane;
+}
+
+function drawPauseBtn() {
+  ctx.save();
+  roundRect(20, H - 40, 100, 30, 4);
+  ctx.fillStyle = "rgba(0,0,0,0.6)";
+  ctx.fill();
+  ctx.strokeStyle = "#FFF";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.fillStyle = "#FFF";
+  ctx.font = "12px " + FONT_UI;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("II Pause", 70, H - 25);
+  ctx.restore();
+  registerUiButton(20, H - 40, 100, 30, pauseGame);
 }
 
 window.addEventListener("keydown", (e) => {
