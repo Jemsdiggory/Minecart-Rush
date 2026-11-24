@@ -12,6 +12,7 @@ const GOLD_SCORE = 15;
 const STATE = {
   START: "START",
   PLAYING: "PLAYING",
+  PAUSED: "PAUSED",
   LEVEL_COMPLETE: "LEVEL_COMPLETE",
   GAME_OVER: "GAME_OVER",
   WIN: "WIN"
@@ -133,6 +134,19 @@ function stopBgm() {
     try { bgmGain.disconnect(); } catch (e) {}
   }
   bgmGain = null;
+}
+
+function pauseGame() {
+  if (gameState !== STATE.PLAYING) return;
+  setState(STATE.PAUSED);
+  stopBgm();
+}
+
+function resumeGame() {
+  if (gameState !== STATE.PAUSED) return;
+  resetTimer();
+  setState(STATE.PLAYING);
+  startBgm();
 }
 
 function playGoldSound() {
@@ -713,6 +727,15 @@ window.addEventListener("keydown", (e) => {
     } else if (e.key === "ArrowRight" || key === "d") {
       moveLane(1);
     }
+  }
+  if (!e.repeat && (key === "p" || e.key === "Escape")) {
+    if (gameState === STATE.PLAYING) pauseGame();
+    else if (gameState === STATE.PAUSED) resumeGame();
+  }
+  if (gameState === STATE.PAUSED && !e.repeat) {
+    if (e.key === "Enter") resumeGame();
+    if (key === "r") retryLevel();
+    if (key === "q") goToMenu();
   }
   if ((e.key === "Enter" || e.code === "Space") && !e.repeat) {
     const action = getPrimaryAction();
