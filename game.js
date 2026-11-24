@@ -40,7 +40,7 @@ let levelStartTotalDistance = 0;
 let lives = 3;
 let highScore = Number(localStorage.getItem("highScore_minecart")) || 0;
 let gameState = STATE.START;
-let muted = false;
+let muted = localStorage.getItem("muted_minecart") === "true";
 let debugHitbox = false;
 let messageTimer = 0;
 let frameCount = 0;
@@ -83,6 +83,7 @@ function getAudio() {
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     masterGain = audioCtx.createGain();
+    masterGain.gain.value = muted ? 0 : 1;
     masterGain.connect(audioCtx.destination);
   }
   if (audioCtx.state === "suspended") audioCtx.resume();
