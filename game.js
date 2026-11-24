@@ -172,8 +172,24 @@ function playLevelUpSound() {
   [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => playTone(f, t + i * 0.15, 0.3, "square", 0.2));
 }
 
+function playClickSound() {
+  const t = getAudio().currentTime;
+  playTone(880, t, 0.06, "square", 0.12);
+}
+
+function runAction(action) {
+  playClickSound();
+  action();
+}
+
+function playWinSound() {
+  const t = getAudio().currentTime;
+  [523.25, 659.25, 783.99, 1046.50, 1318.51, 1567.98].forEach((f, i) => playTone(f, t + i * 0.18, 0.4, "square", 0.2));
+}
+
 function toggleMute() {
   muted = !muted;
+  localStorage.setItem("muted_minecart", muted);
   getAudio();
   if (masterGain) masterGain.gain.value = muted ? 0 : 1;
 }
@@ -239,7 +255,7 @@ function endGame(state) {
   }
   
   if (state === STATE.GAME_OVER) playGameOverSound();
-  if (state === STATE.WIN) playLevelUpSound();
+  if (state === STATE.WIN) playWinSound();
 }
 
 function spawnItem() {
@@ -583,7 +599,7 @@ function drawPopups() {
 const btnW = 200, btnH = 50;
 
 function registerUiButton(x, y, w, h, action) {
-  uiButtons.push({ x, y, w, h, action });
+  uiButtons.push({ x, y, w, h, action: () => runAction(action) });
 }
 
 function drawButton(x, y, text, color, action) {
@@ -760,20 +776,20 @@ window.addEventListener("keydown", (e) => {
     }
   }
   if (!e.repeat && (key === "p" || e.key === "Escape")) {
-    if (gameState === STATE.PLAYING) pauseGame();
-    else if (gameState === STATE.PAUSED) resumeGame();
+    if (gameState === STATE.PLAYING) runAction(pauseGame);
+    else if (gameState === STATE.PAUSED) runAction(resumeGame);
   }
   if (gameState === STATE.PAUSED && !e.repeat) {
-    if (e.key === "Enter") resumeGame();
-    if (key === "r") retryLevel();
-    if (key === "q") goToMenu();
+    if (key === "r") runAction(retryLevel);
+    if (key === "q") runAction(goToMenu);
   }
   if ((e.key === "Enter" || e.code === "Space") && !e.repeat) {
     const action = getPrimaryAction();
-    if (action) action();
+    if (action) runAction(action);
+    else if (e.key === "Enter" && gameState === STATE.PAUSED) runAction(resumeGame);
   }
-  if (key === "r" && gameState === STATE.GAME_OVER && !e.repeat) retryLevel();
-  if (key === "q" && [STATE.LEVEL_COMPLETE, STATE.GAME_OVER, STATE.WIN].includes(gameState)) goToMenu();
+  if (key === "r" && gameState === STATE.GAME_OVER && !e.repeat) runAction(retryLevel);
+  if (key === "q" && [STATE.LEVEL_COMPLETE, STATE.GAME_OVER, STATE.WIN].includes(gameState)) runAction(goToMenu);
   if (key === "m") toggleMute();
   if (key === "h" && !e.repeat) debugHitbox = !debugHitbox;
 });
