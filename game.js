@@ -65,6 +65,7 @@ let uiButtons = [];
 
 function setState(newState) {
   gameState = newState;
+  if (newState !== STATE.PLAYING) stopBgm();
 }
 
 function resetTimer() {
@@ -107,7 +108,7 @@ function playTone(freq, start, duration, type = "sine", volume = 0.2, dest = mas
 }
 
 function scheduleBgm() {
-  if (!bgmGain || audioCtx.state === "closed") return;
+  if (gameState !== STATE.PLAYING || !bgmGain || audioCtx.state === "closed") return;
   const now = audioCtx.currentTime;
   const speed = LEVELS[currentLevel].speed;
   const interval = 1.5 / speed; 
@@ -120,6 +121,10 @@ function scheduleBgm() {
 }
 
 function startBgm() {
+  if (gameState !== STATE.PLAYING) {
+    stopBgm();
+    return;
+  }
   stopBgm();
   const audio = getAudio();
   bgmGain = audio.createGain();
