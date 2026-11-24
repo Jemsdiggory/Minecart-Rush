@@ -1,5 +1,13 @@
 ﻿# Changelog Minecart Rush
 
+## Lengkapi SFX Sesuai GDD
+
+Branch: `feat/audio-sfx` | Tanggal: 2026-11-24
+
+- Masalah/tujuan: SFX game over, menang, dan tombol belum ada. Status mute juga belum tersimpan.
+- Perubahan: Tambah nada game over dan fanfare menang, bunyi klik untuk tombol dan shortcut, simpan status mute, dan pastikan BGM cuma jalan saat main.
+- Cara uji: Kalahkan game, menang di Level 3, coba tombol dan shortcut menu, mute lalu refresh, serta cek suara saat pause, menu, dan layar hasil.
+
 ## Sistem Pause
 
 Branch: `feat/pause-system` | Tanggal: 2026-11-24
