@@ -657,7 +657,7 @@ function draw() {
   uiButtons = [];
   drawBackground();
   
-  if ([STATE.PLAYING, STATE.LEVEL_COMPLETE, STATE.GAME_OVER, STATE.WIN].includes(gameState)) {
+  if ([STATE.PLAYING, STATE.PAUSED, STATE.LEVEL_COMPLETE, STATE.GAME_OVER, STATE.WIN].includes(gameState)) {
     drawSparks();
     drawItems();
     drawPlayer();
@@ -669,6 +669,12 @@ function draw() {
   if (gameState === STATE.START) {
     drawOverlay("MINECART RUSH", "Geser kiri/kanan. Kumpulkan Emas!", [
       { text: "MULAI", color: "#FFD700", action: newGame }
+    ]);
+  } else if (gameState === STATE.PAUSED) {
+    drawOverlay("PAUSE", `Level ${currentLevel}\nJarak: ${Math.floor(distance)} / ${LEVELS[currentLevel].target}m | Skor: ${score}`, [
+      { text: "LANJUT", color: "#FFD700", action: resumeGame },
+      { text: "ULANG LEVEL", color: "#E63946", action: retryLevel },
+      { text: "MENU UTAMA", color: "#00F0FF", action: goToMenu }
     ]);
   } else if (gameState === STATE.LEVEL_COMPLETE) {
     drawOverlay(`LEVEL ${currentLevel} SELESAI`, `Jarak level ini: ${Math.floor(distance)}m\nTotal emas: ${goldCollected} | Skor: ${score}`, [
