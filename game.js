@@ -12,6 +12,7 @@ const GOLD_SCORE = 15;
 const STATE = {
   START: "START",
   PLAYING: "PLAYING",
+  PAUSED: "PAUSED",
   LEVEL_COMPLETE: "LEVEL_COMPLETE",
   GAME_OVER: "GAME_OVER",
   WIN: "WIN"
@@ -133,6 +134,19 @@ function stopBgm() {
     try { bgmGain.disconnect(); } catch (e) {}
   }
   bgmGain = null;
+}
+
+function pauseGame() {
+  if (gameState !== STATE.PLAYING) return;
+  setState(STATE.PAUSED);
+  stopBgm();
+}
+
+function resumeGame() {
+  if (gameState !== STATE.PAUSED) return;
+  resetTimer();
+  setState(STATE.PLAYING);
+  startBgm();
 }
 
 function playGoldSound() {
@@ -643,7 +657,7 @@ function draw() {
   uiButtons = [];
   drawBackground();
   
-  if ([STATE.PLAYING, STATE.LEVEL_COMPLETE, STATE.GAME_OVER, STATE.WIN].includes(gameState)) {
+  if ([STATE.PLAYING, STATE.PAUSED, STATE.LEVEL_COMPLETE, STATE.GAME_OVER, STATE.WIN].includes(gameState)) {
     drawSparks();
     drawItems();
     drawPlayer();
@@ -655,6 +669,12 @@ function draw() {
   if (gameState === STATE.START) {
     drawOverlay("MINECART RUSH", "Geser kiri/kanan. Kumpulkan Emas!", [
       { text: "MULAI", color: "#FFD700", action: newGame }
+    ]);
+  } else if (gameState === STATE.PAUSED) {
+    drawOverlay("PAUSE", `Level ${currentLevel}\nJarak: ${Math.floor(distance)} / ${LEVELS[currentLevel].target}m | Skor: ${score}`, [
+      { text: "LANJUT", color: "#FFD700", action: resumeGame },
+      { text: "ULANG LEVEL", color: "#E63946", action: retryLevel },
+      { text: "MENU UTAMA", color: "#00F0FF", action: goToMenu }
     ]);
   } else if (gameState === STATE.LEVEL_COMPLETE) {
     drawOverlay(`LEVEL ${currentLevel} SELESAI`, `Jarak level ini: ${Math.floor(distance)}m\nTotal emas: ${goldCollected} | Skor: ${score}`, [
@@ -674,6 +694,7 @@ function draw() {
   }
 
   drawMuteBtn();
+  if (gameState === STATE.PLAYING) drawPauseBtn();
 
   const msgEl = document.getElementById("message");
   if (msgEl) {
@@ -701,6 +722,23 @@ function moveLane(direction) {
   if (nextLane >= 0 && nextLane < LANES.length) currentLane = nextLane;
 }
 
+function drawPauseBtn() {
+  ctx.save();
+  roundRect(20, H - 40, 100, 30, 4);
+  ctx.fillStyle = "rgba(0,0,0,0.6)";
+  ctx.fill();
+  ctx.strokeStyle = "#FFF";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.fillStyle = "#FFF";
+  ctx.font = "12px " + FONT_UI;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("II Pause", 70, H - 25);
+  ctx.restore();
+  registerUiButton(20, H - 40, 100, 30, pauseGame);
+}
+
 window.addEventListener("keydown", (e) => {
   const key = e.key.toLowerCase();
   if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key) || e.code === "Space") {
@@ -714,6 +752,15 @@ window.addEventListener("keydown", (e) => {
       moveLane(1);
     }
   }
+  if (!e.repeat && (key === "p" || e.key === "Escape")) {
+    if (gameState === STATE.PLAYING) pauseGame();
+    else if (gameState === STATE.PAUSED) resumeGame();
+  }
+  if (gameState === STATE.PAUSED && !e.repeat) {
+    if (e.key === "Enter") resumeGame();
+    if (key === "r") retryLevel();
+    if (key === "q") goToMenu();
+  }
   if ((e.key === "Enter" || e.code === "Space") && !e.repeat) {
     const action = getPrimaryAction();
     if (action) action();
@@ -722,6 +769,14 @@ window.addEventListener("keydown", (e) => {
   if (key === "q" && [STATE.LEVEL_COMPLETE, STATE.GAME_OVER, STATE.WIN].includes(gameState)) goToMenu();
   if (key === "m") toggleMute();
   if (key === "h" && !e.repeat) debugHitbox = !debugHitbox;
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && gameState === STATE.PLAYING) pauseGame();
+});
+
+window.addEventListener("blur", () => {
+  if (gameState === STATE.PLAYING) pauseGame();
 });
 
 function handlePointer(x, y) {

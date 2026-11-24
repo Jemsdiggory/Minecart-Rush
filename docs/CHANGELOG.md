@@ -1,5 +1,13 @@
 ﻿# Changelog Minecart Rush
 
+## Sistem Pause
+
+Branch: `feat/pause-system` | Tanggal: 2026-11-24
+
+- Masalah/tujuan: Pemain belum bisa menghentikan game sementara dan game tetap berjalan saat tab ditinggal.
+- Perubahan: Tambah menu pause, tombol Pause di layar, kontrol P/Esc/Enter/R/Q, dan auto-pause saat pindah tab atau jendela kehilangan fokus.
+- Cara uji: Tekan P saat main lalu lanjut dengan P, Esc, atau Enter. Coba ulang level dengan R, kembali ke menu dengan Q, pindah tab 10 detik, dan tap tombol Pause di HP.
+
 ## Alur Menu, Level Selesai, Game Over, dan Menang
 
 Branch: `feat/menu-flow` | Tanggal: 2026-11-18
