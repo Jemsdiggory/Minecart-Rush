@@ -8,6 +8,7 @@ const FONT_TITLE = "'Black Ops One', cursive";
 const TICK_MS = 1000 / 60;
 const HITBOX_PADDING = 6;
 const GOLD_SCORE = 15;
+const MAX_LIVES = 3;
 
 const STATE = {
   START: "START",
@@ -18,8 +19,50 @@ const STATE = {
   WIN: "WIN"
 };
 
-// Definisi 3 Jalur (Lanes)
-const LANES = [100, 300, 500]; 
+// ============= PEMUATAN ASET SPRITE & KOORDINAT CROP ============= //
+const SPRITE_META = {
+  bg:         { src: "images/Background.png",  sx: 0,   sy: 0,   sw: 900, sh: 1800 },
+  rail:       { src: "images/Rel.png",         sx: 131, sy: 172, sw: 340, sh: 1027 },
+  brokenRail: { src: "images/Relrusak.png",    sx: 123, sy: 642, sw: 340, sh: 542  },
+  player:     { src: "images/Player.png",      sx: 162, sy: 120, sw: 472, sh: 548  },
+  coin:       { src: "images/Koin.png",        sx: 174, sy: 134, sw: 274, sh: 288  },
+  coin2:      { src: "images/Koin2.png",       sx: 204, sy: 208, sw: 190, sh: 154  },
+  rock:       { src: "images/Obstacle2.png",   sx: 132, sy: 138, sw: 334, sh: 336  },
+  heartFull:  { src: "images/nyawa.png",       sx: 150, sy: 122, sw: 300, sh: 258  },
+  heartEmpty: { src: "images/nyawakosong.png", sx: 150, sy: 122, sw: 300, sh: 258  },
+  display:    { src: "images/display.png",     sx: 56,  sy: 44,  sw: 812, sh: 590  },
+  title:      { src: "images/judul.png",       sx: 62,  sy: 100, sw: 816, sh: 482  },
+  gameover:   { src: "images/gameover.png",    sx: 72,  sy: 88,  sw: 800, sh: 494  },
+  btnStart:   { src: "images/btnmulai.png",    sx: 242, sy: 238, sw: 440, sh: 214  },
+  btnRestart: { src: "images/btnrestart.png",  sx: 242, sy: 238, sw: 440, sh: 214  }
+};
+
+const sprites = {};
+Object.keys(SPRITE_META).forEach((key) => {
+  const img = new Image();
+  img.src = SPRITE_META[key].src;
+  sprites[key] = img;
+});
+
+function isSpriteReady(key) {
+  const img = sprites[key];
+  return Boolean(img && img.complete && img.naturalWidth > 0);
+}
+
+function drawSprite(key, dx, dy, dw, dh) {
+  if (!isSpriteReady(key)) return false;
+  const m = SPRITE_META[key];
+  ctx.drawImage(sprites[key], m.sx, m.sy, m.sw, m.sh, dx, dy, dw, dh);
+  return true;
+}
+
+// Definisi 3 Jalur di tengah lorong tanah tambang (di antara dinding batu kiri & kanan)
+const LANES = [185, 300, 415];
+const TRACK_SCALE = 0.26;
+const RAIL_DRAW_W = Math.round(SPRITE_META.rail.sw * TRACK_SCALE); // ~94px
+const RAIL_TILE_H = Math.round(SPRITE_META.rail.sh * TRACK_SCALE); // ~267px
+const BG_TILE_H = Math.round(W * (SPRITE_META.bg.sh / SPRITE_META.bg.sw)); // 1200px
+
 let currentLane = 1; // 0: Kiri, 1: Tengah, 2: Kanan
 
 // Konfigurasi Level
@@ -37,30 +80,29 @@ let levelStartGold = 0;
 let distance = 0;
 let totalDistance = 0;
 let levelStartTotalDistance = 0;
-let lives = 3;
+let lives = MAX_LIVES;
 let highScore = Number(localStorage.getItem("highScore_minecart")) || 0;
 let gameState = STATE.START;
 let muted = localStorage.getItem("muted_minecart") === "true";
 let debugHitbox = false;
-let messageTimer = 0;
 let frameCount = 0;
 let trackOffset = 0;
+let bgOffset = 0;
 let accumulator = 0;
 let lastTime = null;
 
-// Kereta Pemain
+// Kereta Pemain (ukuran mengikuti proporsi Player.png di atas rel)
 const player = {
   x: LANES[1],
-  y: H - 150,
-  width: 60,
-  height: 90,
+  y: H - 155,
+  width: 68,
+  height: 79,
   invulnerable: 0 // Waktu kedip setelah kena hit
 };
 
 let items = [];
 let popups = [];
 let sparks = []; // Partikel percikan roda
-const keysPressed = {};
 let uiButtons = [];
 
 function setState(newState) {
@@ -73,7 +115,7 @@ function resetTimer() {
   lastTime = null;
 }
 
-// Audio 
+// ============= AUDIO (Web Audio API) ============= //
 let audioCtx = null;
 let masterGain = null;
 let bgmGain = null;
@@ -111,8 +153,8 @@ function scheduleBgm() {
   if (gameState !== STATE.PLAYING || !bgmGain || audioCtx.state === "closed") return;
   const now = audioCtx.currentTime;
   const speed = LEVELS[currentLevel].speed;
-  const interval = 1.5 / speed; 
-  
+  const interval = 1.5 / speed;
+
   while (bgmNextTime < now + 0.5) {
     playTone(100, bgmNextTime, interval * 0.8, "square", 0.1, bgmGain);
     playTone(80, bgmNextTime + interval, interval * 0.8, "square", 0.08, bgmGain);
@@ -157,8 +199,8 @@ function resumeGame() {
 
 function playGoldSound() {
   const t = getAudio().currentTime;
-  playTone(987.77, t, 0.1, "sine", 0.2); 
-  playTone(1318.51, t + 0.08, 0.15, "sine", 0.2); 
+  playTone(987.77, t, 0.1, "sine", 0.2);
+  playTone(1318.51, t + 0.08, 0.15, "sine", 0.2);
 }
 
 function playHitSound() {
@@ -199,6 +241,8 @@ function toggleMute() {
   if (masterGain) masterGain.gain.value = muted ? 0 : 1;
 }
 
+// ============= ALUR PERMAINAN ============= //
+
 function newGame() {
   score = 0;
   goldCollected = 0;
@@ -214,17 +258,17 @@ function startLevel(level) {
   levelStartTotalDistance = totalDistance;
   currentLane = 1;
   player.x = LANES[currentLane];
-  
+  player.invulnerable = 0;
+
   distance = 0;
-  lives = 3;
-  
+  lives = MAX_LIVES;
+
   items = [];
   popups = [];
   sparks = [];
   frameCount = 0;
-  messageTimer = 0;
   setState(STATE.PLAYING);
-  
+
   startBgm();
 }
 
@@ -246,19 +290,19 @@ function goToMenu() {
   sparks = [];
   currentLane = 1;
   player.x = LANES[currentLane];
-  messageTimer = 0;
+  player.invulnerable = 0;
   setState(STATE.START);
 }
 
 function endGame(state) {
   setState(state);
   stopBgm();
-  
+
   if ((state === STATE.GAME_OVER || state === STATE.WIN) && score > highScore) {
     highScore = score;
     localStorage.setItem("highScore_minecart", highScore);
   }
-  
+
   if (state === STATE.GAME_OVER) playGameOverSound();
   if (state === STATE.WIN) playWinSound();
 }
@@ -266,18 +310,49 @@ function endGame(state) {
 function spawnItem() {
   const rate = LEVELS[currentLevel].spawnRate;
   if (frameCount % rate === 0) {
-    const laneIdx = Math.floor(Math.random() * 3);
+    const laneIdx = Math.floor(Math.random() * LANES.length);
     const x = LANES[laneIdx];
-    
-    const isGold = Math.random() < 0.4;
-    items.push({
-      x: x,
-      y: -50,
-      width: 50,
-      height: 50,
-      type: isGold ? "gold" : (Math.random() < 0.5 ? "rock" : "broken"),
-      markedForDeletion: false
-    });
+    const type = Math.random() < 0.4 ? "gold" : (Math.random() < 0.5 ? "rock" : "broken");
+
+    if (type === "gold") {
+      const isDoubleCoin = Math.random() < 0.35;
+      items.push({
+        x,
+        y: -60,
+        width: isDoubleCoin ? 54 : 50,
+        height: isDoubleCoin ? 46 : 52,
+        drawW: isDoubleCoin ? 54 : 50,
+        drawH: isDoubleCoin ? 44 : 52,
+        type,
+        variant: isDoubleCoin ? "coin2" : "coin",
+        scoreValue: isDoubleCoin ? GOLD_SCORE * 2 : GOLD_SCORE,
+        goldCount: isDoubleCoin ? 2 : 1,
+        markedForDeletion: false
+      });
+    } else if (type === "rock") {
+      items.push({
+        x,
+        y: -70,
+        width: 76,
+        height: 76,
+        drawW: 82,
+        drawH: 82,
+        type,
+        markedForDeletion: false
+      });
+    } else {
+      const brokenDrawH = Math.round(SPRITE_META.brokenRail.sh * TRACK_SCALE); // ~141px
+      items.push({
+        x,
+        y: -90,
+        width: 74,
+        height: 118,
+        drawW: RAIL_DRAW_W,
+        drawH: brokenDrawH,
+        type,
+        markedForDeletion: false
+      });
+    }
   }
 }
 
@@ -311,66 +386,63 @@ function isColliding(box1, box2) {
 
 function update() {
   if (gameState !== STATE.PLAYING) return;
-  
+
   frameCount++;
   const speed = LEVELS[currentLevel].speed;
-  
-  distance += speed / 30; 
+
+  distance += speed / 30;
   totalDistance += speed / 30;
-  
-  trackOffset += speed;
-  if (trackOffset > 100) trackOffset = 0;
+
+  bgOffset = (bgOffset + speed) % BG_TILE_H;
+  trackOffset = (trackOffset + speed) % RAIL_TILE_H;
 
   // Gerakan Smooth & Efek Percikan Saat Pindah Jalur
   const diffX = LANES[currentLane] - player.x;
-  player.x += diffX * 0.15;
-  
+  player.x += diffX * 0.16;
+
   if (Math.abs(diffX) > 3) {
-    // Generate percikan api roda
     sparks.push({
-      x: player.x + (diffX > 0 ? -player.width/2 : player.width/2),
-      y: player.y + player.height - 20,
-      vx: (Math.random() - 0.5) * 2 - Math.sign(diffX) * 3,
-      vy: Math.random() * 3 + 1,
-      life: Math.random() * 15 + 10,
-      color: Math.random() > 0.5 ? "#FFD700" : "#FFA500"
+      x: player.x + (diffX > 0 ? -player.width / 2 + 6 : player.width / 2 - 6),
+      y: player.y + player.height - 16,
+      vx: (Math.random() - 0.5) * 2 - Math.sign(diffX) * 2.8,
+      vy: Math.random() * 3 + 1.2,
+      life: Math.random() * 14 + 10,
+      color: Math.random() > 0.45 ? "#FFD54F" : "#FF8F00"
     });
   }
 
-  // Update partikel api
-  sparks.forEach(s => {
+  sparks.forEach((s) => {
     s.x += s.vx;
     s.y += s.vy;
     s.life--;
   });
-  sparks = sparks.filter(s => s.life > 0);
-  
+  sparks = sparks.filter((s) => s.life > 0);
+
   if (player.invulnerable > 0) player.invulnerable--;
-  if (messageTimer > 0) messageTimer--;
 
   spawnItem();
-  
-  items.forEach(item => {
-    item.y += speed; 
-    
-    if (item.y > H + 50) {
+
+  items.forEach((item) => {
+    item.y += speed;
+
+    if (item.y > H + 100) {
       item.markedForDeletion = true;
     }
 
     if (!item.markedForDeletion && isColliding(getPlayerBox(), getItemBox(item))) {
       if (item.type === "gold") {
-        score += GOLD_SCORE;
-        goldCollected++;
+        const pts = item.scoreValue || GOLD_SCORE;
+        score += pts;
+        goldCollected += item.goldCount || 1;
         playGoldSound();
-        popups.push({ x: item.x, y: player.y - 20, text: `+${GOLD_SCORE}`, life: 30, color: "#FFD700" });
+        popups.push({ x: item.x, y: player.y - 16, text: `+${pts}`, life: 30, color: "#FFD54F" });
         item.markedForDeletion = true;
       } else if (player.invulnerable === 0) {
         lives--;
         playHitSound();
-        player.invulnerable = 60; 
-        messageTimer = 40;
+        player.invulnerable = 60;
         item.markedForDeletion = true;
-        
+
         if (lives <= 0) {
           endGame(STATE.GAME_OVER);
         }
@@ -378,9 +450,9 @@ function update() {
     }
   });
 
-  items = items.filter(i => !i.markedForDeletion);
-  popups.forEach(p => { p.y -= 2; p.life--; });
-  popups = popups.filter(p => p.life > 0);
+  items = items.filter((i) => !i.markedForDeletion);
+  popups.forEach((p) => { p.y -= 2; p.life--; });
+  popups = popups.filter((p) => p.life > 0);
 
   const target = LEVELS[currentLevel].target;
   if (distance >= target) {
@@ -407,31 +479,80 @@ function roundRect(x, y, w, h, r) {
 }
 
 function drawBackground() {
-  ctx.fillStyle = "#1A1412"; 
+  ctx.fillStyle = "#362E26";
   ctx.fillRect(0, 0, W, H);
 
-  ctx.lineWidth = 4;
-  LANES.forEach(lx => {
-    ctx.fillStyle = "#4A3219";
-    for (let y = trackOffset - 100; y < H; y += 100) {
-      ctx.fillRect(lx - 40, y, 80, 16);
+  // 1. Gambar lorong tambang (Background.png) scrolling mulus
+  if (isSpriteReady("bg")) {
+    const startY = Math.floor(bgOffset) - BG_TILE_H;
+    for (let y = startY; y < H; y += BG_TILE_H) {
+      ctx.drawImage(sprites.bg, 0, 0, SPRITE_META.bg.sw, SPRITE_META.bg.sh, 0, y, W, BG_TILE_H + 1);
     }
-    ctx.strokeStyle = "#808080";
-    ctx.beginPath();
-    ctx.moveTo(lx - 25, 0); ctx.lineTo(lx - 25, H);
-    ctx.moveTo(lx + 25, 0); ctx.lineTo(lx + 25, H);
-    ctx.stroke();
+  }
+
+  // 2. Gambar 3 jalur rel (Rel.png)
+  // Jika ada rintangan "broken" (Relrusak) di jalur tersebut, potong area rel utuh
+  // tepat di posisi patahan supaya tanah tambang terlihat di sela rel yang putus.
+  LANES.forEach((lx) => {
+    const brokenOnLane = items.filter((it) => it.type === "broken" && Math.abs(it.x - lx) < 5);
+
+    ctx.save();
+    if (brokenOnLane.length > 0) {
+      ctx.beginPath();
+      ctx.rect(lx - RAIL_DRAW_W / 2 - 8, 0, RAIL_DRAW_W + 16, H);
+      brokenOnLane.forEach((br) => {
+        const cutTop = br.y - br.drawH / 2 - 2;
+        const cutH = br.drawH + 4;
+        ctx.rect(lx - RAIL_DRAW_W / 2 - 8, cutTop, RAIL_DRAW_W + 16, cutH);
+      });
+      ctx.clip("evenodd");
+    }
+
+    if (isSpriteReady("rail")) {
+      const startY = Math.floor(trackOffset) - RAIL_TILE_H;
+      for (let y = startY; y < H; y += RAIL_TILE_H) {
+        drawSprite("rail", lx - RAIL_DRAW_W / 2, y, RAIL_DRAW_W, RAIL_TILE_H + 1);
+      }
+    } else {
+      ctx.fillStyle = "#4A3219";
+      for (let y = (trackOffset % 60) - 60; y < H; y += 60) {
+        ctx.fillRect(lx - 38, y, 76, 14);
+      }
+      ctx.strokeStyle = "#8C8C8C";
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(lx - 24, 0); ctx.lineTo(lx - 24, H);
+      ctx.moveTo(lx + 24, 0); ctx.lineTo(lx + 24, H);
+      ctx.stroke();
+    }
+    ctx.restore();
   });
 }
 
+function drawCaveLighting() {
+  // Vignette halus di pinggir lorong tambang agar suasana bawah tanah lebih terasa
+  const gradTop = ctx.createLinearGradient(0, 0, 0, 130);
+  gradTop.addColorStop(0, "rgba(8, 6, 5, 0.45)");
+  gradTop.addColorStop(1, "rgba(8, 6, 5, 0)");
+  ctx.fillStyle = gradTop;
+  ctx.fillRect(0, 0, W, 130);
+
+  const gradBottom = ctx.createLinearGradient(0, H - 90, 0, H);
+  gradBottom.addColorStop(0, "rgba(8, 6, 5, 0)");
+  gradBottom.addColorStop(1, "rgba(8, 6, 5, 0.42)");
+  ctx.fillStyle = gradBottom;
+  ctx.fillRect(0, H - 90, W, 90);
+}
+
 function drawSparks() {
-  sparks.forEach(s => {
+  sparks.forEach((s) => {
+    ctx.save();
     ctx.fillStyle = s.color;
-    ctx.globalAlpha = s.life / 25;
+    ctx.globalAlpha = Math.max(0, s.life / 24);
     ctx.beginPath();
     ctx.arc(s.x, s.y, 3, 0, Math.PI * 2);
     ctx.fill();
-    ctx.globalAlpha = 1.0;
+    ctx.restore();
   });
 }
 
@@ -440,95 +561,83 @@ function drawPlayer() {
 
   ctx.save();
   ctx.translate(player.x, player.y);
-  
-  // Efek Miring (Tilt) saat pindah jalur
+
+  // Efek miring halus saat berpindah rel
   const diffX = LANES[currentLane] - player.x;
-  const tilt = diffX * 0.004; 
+  const tilt = diffX * 0.0035;
   ctx.rotate(tilt);
 
-  // Roda Kereta
-  ctx.fillStyle = "#222";
-  ctx.fillRect(-player.width/2 - 6, 10, 8, 24);
-  ctx.fillRect(player.width/2 - 2, 10, 8, 24);
-  ctx.fillRect(-player.width/2 - 6, player.height - 34, 8, 24);
-  ctx.fillRect(player.width/2 - 2, player.height - 34, 8, 24);
-
-  // Badan Kereta
-  roundRect(-player.width/2, 0, player.width, player.height, 8);
-  ctx.fillStyle = "#5C4033";
-  ctx.fill();
-  ctx.strokeStyle = "#8A8A8A";
-  ctx.lineWidth = 6;
-  ctx.stroke();
-
-  // --- KARAKTER PENAMBANG (Top-Down View) ---
-  
-  // Baju Biru Pekerja
-  ctx.fillStyle = "#1D3557"; 
-  roundRect(-16, 25, 32, 25, 6);
+  // Sorot lampu helm penambang ke arah depan rel
+  const beamGrad = ctx.createLinearGradient(0, 22, 0, -115);
+  beamGrad.addColorStop(0, "rgba(255, 226, 115, 0.28)");
+  beamGrad.addColorStop(1, "rgba(255, 210, 80, 0)");
+  ctx.fillStyle = beamGrad;
+  ctx.beginPath();
+  ctx.moveTo(-10, 22);
+  ctx.lineTo(10, 22);
+  ctx.lineTo(44, -115);
+  ctx.lineTo(-44, -115);
+  ctx.closePath();
   ctx.fill();
 
-  // Tumpukan Emas di Kargo Belakang
-  ctx.fillStyle = "#FFD700";
+  // Bayangan bawah kereta
+  ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
   ctx.beginPath();
-  ctx.arc(-10, 65, 10, 0, Math.PI*2);
-  ctx.arc(12, 68, 8, 0, Math.PI*2);
-  ctx.arc(0, 75, 11, 0, Math.PI*2);
+  ctx.ellipse(0, player.height / 2 + 4, player.width * 0.44, player.height * 0.46, 0, 0, Math.PI * 2);
   ctx.fill();
-  
-  // Helm Kuning Keselamatan
-  ctx.fillStyle = "#FFB703";
-  ctx.beginPath();
-  ctx.arc(0, 30, 16, 0, Math.PI*2);
-  ctx.fill();
-  
-  // Lampu Senter Kepala
-  ctx.fillStyle = "#FFF";
-  ctx.fillRect(-6, 12, 12, 6);
-  
-  // Efek Sinar Senter ke Depan
-  ctx.fillStyle = "rgba(255, 230, 0, 0.25)";
-  ctx.beginPath();
-  ctx.moveTo(-6, 12);
-  ctx.lineTo(6, 12);
-  ctx.lineTo(35, -50);
-  ctx.lineTo(-35, -50);
-  ctx.fill();
+
+  if (!drawSprite("player", -player.width / 2, 0, player.width, player.height)) {
+    roundRect(-player.width / 2, 0, player.width, player.height, 8);
+    ctx.fillStyle = "#5C4033";
+    ctx.fill();
+  }
 
   ctx.restore();
 }
 
 function drawItems() {
-  items.forEach(item => {
+  // Gambar rel rusak terlebih dahulu di lapisan rel, lalu batu & koin di atasnya
+  const ordered = [
+    ...items.filter((i) => i.type === "broken"),
+    ...items.filter((i) => i.type !== "broken")
+  ];
+
+  ordered.forEach((item) => {
     ctx.save();
     ctx.translate(item.x, item.y);
-    
-    if (item.type === "gold") {
-      ctx.fillStyle = "#FFD700";
-      ctx.shadowColor = "#FFD700";
-      ctx.shadowBlur = 15;
+
+    if (item.type === "broken") {
+      if (!drawSprite("brokenRail", -item.drawW / 2, -item.drawH / 2, item.drawW, item.drawH)) {
+        ctx.fillStyle = "#E63946";
+        ctx.fillRect(-item.width / 2, -8, item.width, 16);
+      }
+    } else if (item.type === "rock") {
+      // Bayangan batu di tanah
+      ctx.fillStyle = "rgba(0, 0, 0, 0.32)";
       ctx.beginPath();
-      ctx.moveTo(0, -item.height/2);
-      ctx.lineTo(item.width/2, 0);
-      ctx.lineTo(0, item.height/2);
-      ctx.lineTo(-item.width/2, 0);
+      ctx.ellipse(2, 6, item.drawW * 0.44, item.drawH * 0.38, 0, 0, Math.PI * 2);
       ctx.fill();
-    } 
-    else if (item.type === "rock") {
-      ctx.fillStyle = "#505050";
-      ctx.beginPath();
-      ctx.arc(0, 0, item.width/2, 0, Math.PI*2);
-      ctx.fill();
-      ctx.fillStyle = "#303030";
-      ctx.beginPath();
-      ctx.arc(-5, -5, item.width/4, 0, Math.PI*2);
-      ctx.fill();
+
+      if (!drawSprite("rock", -item.drawW / 2, -item.drawH / 2, item.drawW, item.drawH)) {
+        ctx.fillStyle = "#606060";
+        ctx.beginPath();
+        ctx.arc(0, 0, item.width / 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (item.type === "gold") {
+      const bob = Math.sin((frameCount + item.x) * 0.1) * 2;
+      const coinSprite = item.variant === "coin2" ? "coin2" : "coin";
+      ctx.shadowColor = "rgba(255, 204, 0, 0.45)";
+      ctx.shadowBlur = 10;
+
+      if (!drawSprite(coinSprite, -item.drawW / 2, -item.drawH / 2 + bob, item.drawW, item.drawH)) {
+        ctx.fillStyle = "#FFD700";
+        ctx.beginPath();
+        ctx.arc(0, 0, item.width / 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
-    else if (item.type === "broken") {
-      ctx.fillStyle = "#E63946";
-      ctx.fillRect(-item.width/2, -5, item.width, 10);
-      ctx.fillRect(-5, -item.height/2, 10, item.height);
-    }
+
     ctx.restore();
   });
 }
@@ -547,7 +656,7 @@ function drawHitboxes() {
   );
 
   ctx.strokeStyle = "#FF0000";
-  items.forEach(item => {
+  items.forEach((item) => {
     const itemBox = getItemBox(item);
     ctx.strokeRect(
       itemBox.left,
@@ -560,39 +669,120 @@ function drawHitboxes() {
   ctx.restore();
 }
 
+function drawRivet(cx, cy, r = 4) {
+  ctx.save();
+  ctx.fillStyle = "#7D7873";
+  ctx.strokeStyle = "#1B1715";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+}
+
 function drawHUD() {
-  ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
-  ctx.fillRect(0, 0, W, 50);
+  ctx.save();
 
-  ctx.font = "bold 18px " + FONT_UI;
-  ctx.textBaseline = "middle";
+  // Papan HUD kayu tambang dengan lis besi di bagian atas layar
+  const hudH = 58;
+  const woodGrad = ctx.createLinearGradient(0, 0, 0, hudH);
+  woodGrad.addColorStop(0, "rgba(58, 35, 19, 0.95)");
+  woodGrad.addColorStop(0.82, "rgba(34, 20, 11, 0.95)");
+  woodGrad.addColorStop(1, "rgba(22, 13, 8, 0.98)");
+  ctx.fillStyle = woodGrad;
+  ctx.fillRect(0, 0, W, hudH);
 
+  // Lis besi bawah HUD
+  ctx.fillStyle = "#5C5854";
+  ctx.fillRect(0, hudH - 5, W, 3);
+  ctx.fillStyle = "#171311";
+  ctx.fillRect(0, hudH - 2, W, 2);
+
+  drawRivet(10, 10, 3.5);
+  drawRivet(W - 10, 10, 3.5);
+  drawRivet(10, hudH - 12, 3.5);
+  drawRivet(W - 10, hudH - 12, 3.5);
+
+  // Kiri: Level & Jarak + Progress Bar
   const target = LEVELS[currentLevel].target;
-  ctx.fillStyle = "#00F0FF";
+  const ratio = Math.min(1, Math.max(0, distance / target));
+
+  ctx.textBaseline = "middle";
   ctx.textAlign = "left";
-  ctx.fillText(`Jarak: ${Math.floor(distance)} / ${target}m`, 15, 25);
+  ctx.font = "900 13px " + FONT_UI;
+  ctx.fillStyle = "#FFC928";
+  ctx.fillText(`LV.${currentLevel}`, 22, 19);
 
-  ctx.fillStyle = "#E63946";
-  ctx.textAlign = "center";
-  let hearts = "";
-  for(let i=0; i<lives; i++) hearts += "❤️ ";
-  ctx.fillText(hearts, W / 2, 25);
+  ctx.font = "bold 14px " + FONT_UI;
+  ctx.fillStyle = "#F5EAD6";
+  ctx.fillText(`${Math.floor(distance)} / ${target}m`, 64, 19);
 
-  ctx.fillStyle = "#FFD700";
+  // Bar progres jarak lorong
+  const barX = 22;
+  const barY = 33;
+  const barW = 166;
+  const barH = 10;
+  roundRect(barX, barY, barW, barH, 5);
+  ctx.fillStyle = "#160E08";
+  ctx.fill();
+  ctx.strokeStyle = "#6E4A2C";
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  if (ratio > 0) {
+    roundRect(barX + 1.5, barY + 1.5, Math.max(6, (barW - 3) * ratio), barH - 3, 4);
+    const barGrad = ctx.createLinearGradient(barX, 0, barX + barW, 0);
+    barGrad.addColorStop(0, "#FF9800");
+    barGrad.addColorStop(1, "#FFE047");
+    ctx.fillStyle = barGrad;
+    ctx.fill();
+  }
+
+  // Tengah: Indikator Nyawa menggunakan sprite nyawa.png & nyawakosong.png
+  const heartW = 30;
+  const heartH = 26;
+  const heartGap = 8;
+  const totalHeartsW = MAX_LIVES * heartW + (MAX_LIVES - 1) * heartGap;
+  const startHeartX = W / 2 - totalHeartsW / 2;
+  const heartY = (hudH - 4 - heartH) / 2;
+
+  for (let i = 0; i < MAX_LIVES; i++) {
+    const hx = startHeartX + i * (heartW + heartGap);
+    const spriteKey = i < lives ? "heartFull" : "heartEmpty";
+    if (!drawSprite(spriteKey, hx, heartY, heartW, heartH)) {
+      ctx.fillStyle = i < lives ? "#E63946" : "#4A1C1C";
+      ctx.font = "20px " + FONT_UI;
+      ctx.textAlign = "center";
+      ctx.fillText("♥", hx + heartW / 2, hudH / 2);
+    }
+  }
+
+  // Kanan: Ikon Koin + Skor
+  const scoreText = `${score}`;
+  ctx.font = "900 20px " + FONT_UI;
   ctx.textAlign = "right";
-  ctx.fillText(`Skor: ${score}`, W - 15, 25);
+  ctx.fillStyle = "#FFD54F";
+  ctx.shadowColor = "rgba(0, 0, 0, 0.7)";
+  ctx.shadowBlur = 3;
+  ctx.fillText(scoreText, W - 22, 28);
+  ctx.shadowBlur = 0;
 
-  ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
-  ctx.textAlign = "left";
-  ctx.font = "14px " + FONT_UI;
-  ctx.fillText(`Lv. ${currentLevel}`, 15, 70);
+  const scoreWidth = ctx.measureText(scoreText).width;
+  ctx.font = "bold 11px " + FONT_UI;
+  ctx.fillStyle = "#C9B396";
+  ctx.fillText("SKOR", W - 22 - scoreWidth - 8, 22);
+
+  drawSprite("coin", W - 22 - scoreWidth - 38, 15, 25, 26);
+
+  ctx.restore();
 }
 
 function drawPopups() {
   ctx.save();
   ctx.font = "bold 22px " + FONT_TITLE;
   ctx.textAlign = "center";
-  popups.forEach(p => {
+  popups.forEach((p) => {
     ctx.fillStyle = p.color;
     ctx.shadowColor = "#000";
     ctx.shadowBlur = 4;
@@ -601,22 +791,72 @@ function drawPopups() {
   ctx.restore();
 }
 
-const btnW = 200, btnH = 50;
-
 function registerUiButton(x, y, w, h, action) {
   uiButtons.push({ x, y, w, h, action: () => runAction(action) });
 }
 
-function drawButton(x, y, text, color, action) {
-  roundRect(x, y, btnW, btnH, 8);
-  ctx.fillStyle = color;
+// Menggambar tombol dengan sprite asli (btnmulai.png / btnrestart.png) atau papan kayu senada
+function drawMineButton(x, y, w, h, button) {
+  const { text, spriteKey, variant = "gold", action } = button;
+
+  if (spriteKey && isSpriteReady(spriteKey)) {
+    drawSprite(spriteKey, x, y, w, h);
+    registerUiButton(x, y, w, h, action);
+    return;
+  }
+
+  ctx.save();
+
+  // Bayangan bawah papan tombol
+  roundRect(x, y + 4, w, h, 10);
+  ctx.fillStyle = "rgba(0, 0, 0, 0.45)";
   ctx.fill();
-  ctx.fillStyle = "#121010";
-  ctx.font = "bold 20px " + FONT_UI;
+
+  // Badan papan kayu tambang
+  roundRect(x, y, w, h, 10);
+  const plankGrad = ctx.createLinearGradient(0, y, 0, y + h);
+  if (variant === "red") {
+    plankGrad.addColorStop(0, "#A93326");
+    plankGrad.addColorStop(0.8, "#7D2319");
+    plankGrad.addColorStop(1, "#54160F");
+  } else if (variant === "slate") {
+    plankGrad.addColorStop(0, "#5B4634");
+    plankGrad.addColorStop(0.8, "#3F2F22");
+    plankGrad.addColorStop(1, "#2A1F16");
+  } else {
+    plankGrad.addColorStop(0, "#8B572A");
+    plankGrad.addColorStop(0.8, "#673E1C");
+    plankGrad.addColorStop(1, "#452810");
+  }
+  ctx.fillStyle = plankGrad;
+  ctx.fill();
+
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = "#221308";
+  ctx.stroke();
+
+  // Lis besi bagian bawah papan (menyerupai btnmulai.png & btnrestart.png)
+  ctx.fillStyle = "#7E7872";
+  ctx.fillRect(x + 4, y + h - 10, w - 8, 3);
+
+  // Paku keling di 4 sudut tombol
+  drawRivet(x + 11, y + 11, 3.5);
+  drawRivet(x + w - 11, y + 11, 3.5);
+  drawRivet(x + 11, y + h - 15, 3.5);
+  drawRivet(x + w - 11, y + h - 15, 3.5);
+
+  // Teks tombol bergaya tebal kontras
+  ctx.font = "900 18px " + FONT_UI;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(text, x + btnW / 2, y + btnH/2);
-  registerUiButton(x, y, btnW, btnH, action);
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = "#140B05";
+  ctx.strokeText(text, x + w / 2, y + h / 2 - 2);
+  ctx.fillStyle = variant === "slate" ? "#F5EAD6" : "#FFD54F";
+  ctx.fillText(text, x + w / 2, y + h / 2 - 2);
+
+  ctx.restore();
+  registerUiButton(x, y, w, h, action);
 }
 
 function getPrimaryAction() {
@@ -626,108 +866,270 @@ function getPrimaryAction() {
   return null;
 }
 
-function drawOverlay(title, subtitle, buttons = []) {
-  ctx.fillStyle = "rgba(18, 16, 16, 0.85)";
+function drawDisplayBoard(x, y, w, h) {
+  if (!drawSprite("display", x, y, w, h)) {
+    roundRect(x, y, w, h, 16);
+    ctx.fillStyle = "#29190A";
+    ctx.fill();
+    ctx.strokeStyle = "#6E4526";
+    ctx.lineWidth = 8;
+    ctx.stroke();
+  }
+  // Mengembalikan area dalam papan gelap tempat teks & tombol aman ditempatkan
+  return {
+    left: x + w * 0.1,
+    right: x + w * 0.9,
+    top: y + h * 0.175,
+    bottom: y + h * 0.9,
+    width: w * 0.8,
+    height: h * 0.725
+  };
+}
+
+function drawStartOverlay() {
+  ctx.fillStyle = "rgba(10, 7, 5, 0.58)";
   ctx.fillRect(0, 0, W, H);
 
   ctx.save();
-  const subtitleLines = subtitle.split("\n");
-  const showHighScore = gameState === STATE.START;
-  const overlayHeight = Math.max(300, 220 + subtitleLines.length * 23 + buttons.length * 62 + (showHighScore ? 20 : 0));
-  const overlayTop = H / 2 - overlayHeight / 2;
-  roundRect(W/2 - 200, overlayTop, 400, overlayHeight, 16);
-  ctx.fillStyle = "#2B2118";
-  ctx.fill();
-  ctx.strokeStyle = "#FFD700";
-  ctx.lineWidth = 3;
-  ctx.stroke();
-  
-  ctx.fillStyle = "#FFD700";
-  ctx.font = "bold 36px " + FONT_TITLE;
-  ctx.textAlign = "center";
-  ctx.fillText(title, W/2, overlayTop + 70);
-
-  ctx.fillStyle = "#F1F1F1";
-  ctx.font = "16px " + FONT_UI;
-  const subtitleY = overlayTop + 125;
-  subtitleLines.forEach((line, index) => ctx.fillText(line, W/2, subtitleY + index * 23));
-  
-  if (showHighScore) {
-    ctx.fillStyle = "#A0A0A0";
-    ctx.fillText(`🏆 High Score: ${highScore}`, W/2, subtitleY + subtitleLines.length * 23);
+  // Logo judul.png di bagian atas
+  const logoW = 410;
+  const logoH = Math.round(logoW * (SPRITE_META.title.sh / SPRITE_META.title.sw)); // ~242px
+  const logoX = W / 2 - logoW / 2;
+  const logoY = 58;
+  if (!drawSprite("title", logoX, logoY, logoW, logoH)) {
+    ctx.fillStyle = "#FFD54F";
+    ctx.font = "bold 42px " + FONT_TITLE;
+    ctx.textAlign = "center";
+    ctx.fillText("MINECART RUSH", W / 2, logoY + 120);
   }
 
-  const buttonStartY = overlayTop + overlayHeight - 40 - btnH - Math.max(0, buttons.length - 1) * 62;
-  buttons.forEach((button, index) => {
-    drawButton(W / 2 - btnW / 2, buttonStartY + index * 62, button.text, button.color, button.action);
+  // Papan display.png di bawah logo
+  const boardW = 460;
+  const boardH = 335;
+  const boardX = W / 2 - boardW / 2;
+  const boardY = 312;
+  const inner = drawDisplayBoard(boardX, boardY, boardW, boardH);
+
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "#F5EAD6";
+  ctx.font = "bold 16px " + FONT_UI;
+  ctx.fillText("Geser kiri / kanan untuk berpindah rel", W / 2, inner.top + 28);
+
+  ctx.fillStyle = "#D7C2A6";
+  ctx.font = "14px " + FONT_UI;
+  ctx.fillText("Kumpulkan koin emas & hindari batu maupun rel putus!", W / 2, inner.top + 54);
+
+  // Badge High Score
+  ctx.fillStyle = "#FFD54F";
+  ctx.font = "bold 16px " + FONT_UI;
+  ctx.fillText(`🏆 High Score: ${highScore}`, W / 2, inner.top + 88);
+
+  // Tombol MULAI menggunakan sprite btnmulai.png
+  const startBtnW = 212;
+  const startBtnH = Math.round(startBtnW * (SPRITE_META.btnStart.sh / SPRITE_META.btnStart.sw)); // ~108px
+  drawMineButton(W / 2 - startBtnW / 2, inner.bottom - startBtnH - 8, startBtnW, startBtnH, {
+    text: "MULAI!",
+    spriteKey: "btnStart",
+    action: newGame
   });
+
   ctx.restore();
 }
 
-function drawMuteBtn() {
+function drawGameOverOverlay() {
+  ctx.fillStyle = "rgba(12, 6, 5, 0.72)";
+  ctx.fillRect(0, 0, W, H);
+
   ctx.save();
-  roundRect(W - 120, H - 40, 100, 30, 4);
-  ctx.fillStyle = muted ? "#E63946" : "rgba(0,0,0,0.6)";
-  ctx.fill();
-  ctx.strokeStyle = "#FFF";
-  ctx.lineWidth = 1;
-  ctx.stroke();
-  ctx.fillStyle = "#FFF";
-  ctx.font = "12px " + FONT_UI;
+  // Header gameover.png ("KECELAKAAN!") di bagian atas
+  const goW = 415;
+  const goH = Math.round(goW * (SPRITE_META.gameover.sh / SPRITE_META.gameover.sw)); // ~256px
+  if (!drawSprite("gameover", W / 2 - goW / 2, 42, goW, goH)) {
+    ctx.fillStyle = "#EF473A";
+    ctx.font = "bold 40px " + FONT_TITLE;
+    ctx.textAlign = "center";
+    ctx.fillText("KECELAKAAN!", W / 2, 175);
+  }
+
+  // Papan display.png untuk statistik & tombol aksi
+  const boardW = 472;
+  const boardH = 398;
+  const inner = drawDisplayBoard(W / 2 - boardW / 2, 294, boardW, boardH);
+
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(muted ? "🔇 Suara OFF" : "🔊 Suara ON", W - 70, H - 25);
+  ctx.fillStyle = "#F5EAD6";
+  ctx.font = "bold 16px " + FONT_UI;
+  ctx.fillText(`Jarak Level Ini: ${Math.floor(distance)}m`, W / 2, inner.top + 24);
+  ctx.fillText(`Total Emas: ${goldCollected}   |   Skor: ${score}`, W / 2, inner.top + 50);
+
+  ctx.fillStyle = "#FFD54F";
+  ctx.font = "bold 15px " + FONT_UI;
+  ctx.fillText(`🏆 High Score: ${highScore}`, W / 2, inner.top + 78);
+
+  // Tombol ULANG LEVEL menggunakan sprite btnrestart.png
+  const restartW = 192;
+  const restartH = Math.round(restartW * (SPRITE_META.btnRestart.sh / SPRITE_META.btnRestart.sw)); // ~98px
+  const restartY = inner.top + 102;
+  drawMineButton(W / 2 - restartW / 2, restartY, restartW, restartH, {
+    text: "ULANG LEVEL",
+    spriteKey: "btnRestart",
+    variant: "red",
+    action: retryLevel
+  });
+
+  // Tombol MENU UTAMA papan kayu senada
+  const menuW = 192;
+  const menuH = 54;
+  drawMineButton(W / 2 - menuW / 2, restartY + restartH + 10, menuW, menuH, {
+    text: "MENU UTAMA",
+    variant: "slate",
+    action: goToMenu
+  });
+
   ctx.restore();
-  registerUiButton(W - 120, H - 40, 100, 30, toggleMute);
+}
+
+function drawBoardModal(title, titleColor, lines, buttons) {
+  ctx.fillStyle = "rgba(10, 7, 5, 0.72)";
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.save();
+  const boardW = 484;
+  const boardH = buttons.length >= 3 ? 470 : 410;
+  const boardY = H / 2 - boardH / 2 - 10;
+  const inner = drawDisplayBoard(W / 2 - boardW / 2, boardY, boardW, boardH);
+
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  // Judul modal
+  ctx.font = "bold 32px " + FONT_TITLE;
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = "#120A04";
+  ctx.strokeText(title, W / 2, inner.top + 30);
+  ctx.fillStyle = titleColor;
+  ctx.fillText(title, W / 2, inner.top + 30);
+
+  // Baris statistik
+  ctx.font = "bold 15px " + FONT_UI;
+  lines.forEach((line, idx) => {
+    ctx.fillStyle = idx === lines.length - 1 && line.includes("High") ? "#FFD54F" : "#F5EAD6";
+    ctx.fillText(line, W / 2, inner.top + 72 + idx * 24);
+  });
+
+  // Susun tombol dari bawah area dalam papan ke atas agar proporsional
+  let cursorY = inner.bottom - 10;
+  for (let i = buttons.length - 1; i >= 0; i--) {
+    const btn = buttons[i];
+    const bw = btn.spriteKey ? 184 : 216;
+    const bh = btn.spriteKey
+      ? Math.round(bw * (SPRITE_META.btnRestart.sh / SPRITE_META.btnRestart.sw))
+      : 52;
+    cursorY -= bh;
+    drawMineButton(W / 2 - bw / 2, cursorY, bw, bh, btn);
+    cursorY -= 10;
+  }
+
+  ctx.restore();
+}
+
+function drawCornerPlaque(x, y, w, h, label, activeAlert, action) {
+  ctx.save();
+  roundRect(x, y, w, h, 7);
+  ctx.fillStyle = activeAlert ? "rgba(184, 37, 24, 0.92)" : "rgba(38, 23, 13, 0.9)";
+  ctx.fill();
+  ctx.strokeStyle = "#8C8782";
+  ctx.lineWidth = 1.8;
+  ctx.stroke();
+
+  drawRivet(x + 8, y + h / 2, 2.4);
+  drawRivet(x + w - 8, y + h / 2, 2.4);
+
+  ctx.fillStyle = "#F5EAD6";
+  ctx.font = "bold 13px " + FONT_UI;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(label, x + w / 2, y + h / 2);
+  ctx.restore();
+
+  // Area sentuh diperluas sedikit agar nyaman ditekan di layar HP
+  const pad = 8;
+  registerUiButton(x - pad, y - pad, w + pad * 2, h + pad * 2, action);
+}
+
+function drawMuteBtn() {
+  drawCornerPlaque(W - 136, H - 48, 122, 36, muted ? "🔇 Suara OFF" : "🔊 Suara ON", muted, toggleMute);
+}
+
+function drawPauseBtn() {
+  drawCornerPlaque(14, H - 48, 110, 36, "⏸ Pause", false, pauseGame);
 }
 
 function draw() {
   uiButtons = [];
   drawBackground();
-  
+  drawSparks();
+  drawItems();
+  drawPlayer();
+  drawCaveLighting();
+
   if ([STATE.PLAYING, STATE.PAUSED, STATE.LEVEL_COMPLETE, STATE.GAME_OVER, STATE.WIN].includes(gameState)) {
-    drawSparks();
-    drawItems();
-    drawPlayer();
     if (debugHitbox) drawHitboxes();
     drawHUD();
     drawPopups();
   }
 
   if (gameState === STATE.START) {
-    drawOverlay("MINECART RUSH", "Geser kiri/kanan. Kumpulkan Emas!", [
-      { text: "MULAI", color: "#FFD700", action: newGame }
-    ]);
+    drawStartOverlay();
   } else if (gameState === STATE.PAUSED) {
-    drawOverlay("PAUSE", `Level ${currentLevel}\nJarak: ${Math.floor(distance)} / ${LEVELS[currentLevel].target}m | Skor: ${score}`, [
-      { text: "LANJUT", color: "#FFD700", action: resumeGame },
-      { text: "ULANG LEVEL", color: "#E63946", action: retryLevel },
-      { text: "MENU UTAMA", color: "#00F0FF", action: goToMenu }
-    ]);
+    drawBoardModal(
+      "PAUSE",
+      "#FFD54F",
+      [
+        `${LEVELS[currentLevel].name}`,
+        `Jarak: ${Math.floor(distance)} / ${LEVELS[currentLevel].target}m   |   Skor: ${score}`
+      ],
+      [
+        { text: "LANJUT", variant: "gold", action: resumeGame },
+        { text: "ULANG LEVEL", spriteKey: "btnRestart", variant: "red", action: retryLevel },
+        { text: "MENU UTAMA", variant: "slate", action: goToMenu }
+      ]
+    );
   } else if (gameState === STATE.LEVEL_COMPLETE) {
-    drawOverlay(`LEVEL ${currentLevel} SELESAI`, `Jarak level ini: ${Math.floor(distance)}m\nTotal emas: ${goldCollected} | Skor: ${score}`, [
-      { text: "LEVEL BERIKUTNYA", color: "#FFD700", action: nextLevel },
-      { text: "MENU UTAMA", color: "#00F0FF", action: goToMenu }
-    ]);
+    drawBoardModal(
+      `LEVEL ${currentLevel} SELESAI`,
+      "#FFD54F",
+      [
+        `Jarak Level Ini: ${Math.floor(distance)}m`,
+        `Total Emas: ${goldCollected}   |   Skor: ${score}`
+      ],
+      [
+        { text: "LEVEL BERIKUTNYA", variant: "gold", action: nextLevel },
+        { text: "MENU UTAMA", variant: "slate", action: goToMenu }
+      ]
+    );
   } else if (gameState === STATE.GAME_OVER) {
-    drawOverlay("KECELAKAAN!", `Jarak level ini: ${Math.floor(distance)}m\nTotal emas: ${goldCollected} | Skor: ${score}\nHigh score: ${highScore}`, [
-      { text: "ULANG LEVEL", color: "#E63946", action: retryLevel },
-      { text: "MENU UTAMA", color: "#00F0FF", action: goToMenu }
-    ]);
+    drawGameOverOverlay();
   } else if (gameState === STATE.WIN) {
-    drawOverlay("TAMAT!", `Jarak tempuh: ${Math.floor(totalDistance)}m\nTotal emas: ${goldCollected} | Skor: ${score}\nHigh score: ${highScore}`, [
-      { text: "MAIN LAGI", color: "#00F0FF", action: newGame },
-      { text: "MENU UTAMA", color: "#FFD700", action: goToMenu }
-    ]);
+    drawBoardModal(
+      "TAMAT!",
+      "#FFE047",
+      [
+        `Total Jarak Tambang: ${Math.floor(totalDistance)}m`,
+        `Total Emas: ${goldCollected}   |   Skor: ${score}`,
+        `🏆 High Score: ${highScore}`
+      ],
+      [
+        { text: "MAIN LAGI", variant: "gold", action: newGame },
+        { text: "MENU UTAMA", variant: "slate", action: goToMenu }
+      ]
+    );
   }
 
   drawMuteBtn();
   if (gameState === STATE.PLAYING) drawPauseBtn();
-
-  const msgEl = document.getElementById("message");
-  if (msgEl) {
-    msgEl.textContent = messageTimer > 0 ? "⚠️ AWAS NABRAK!" : "";
-  }
 }
 
 function gameLoop(timestamp) {
@@ -748,23 +1150,6 @@ function gameLoop(timestamp) {
 function moveLane(direction) {
   const nextLane = currentLane + direction;
   if (nextLane >= 0 && nextLane < LANES.length) currentLane = nextLane;
-}
-
-function drawPauseBtn() {
-  ctx.save();
-  roundRect(20, H - 40, 100, 30, 4);
-  ctx.fillStyle = "rgba(0,0,0,0.6)";
-  ctx.fill();
-  ctx.strokeStyle = "#FFF";
-  ctx.lineWidth = 1;
-  ctx.stroke();
-  ctx.fillStyle = "#FFF";
-  ctx.font = "12px " + FONT_UI;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("II Pause", 70, H - 25);
-  ctx.restore();
-  registerUiButton(20, H - 40, 100, 30, pauseGame);
 }
 
 window.addEventListener("keydown", (e) => {
@@ -807,12 +1192,28 @@ window.addEventListener("blur", () => {
   if (gameState === STATE.PLAYING) pauseGame();
 });
 
-function handlePointer(x, y) {
+function getCanvasCoords(clientX, clientY) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: (clientX - rect.left) * (W / rect.width),
+    y: (clientY - rect.top) * (H / rect.height)
+  };
+}
+
+function findUiButton(x, y) {
   for (const button of uiButtons) {
     if (x >= button.x && x <= button.x + button.w && y >= button.y && y <= button.y + button.h) {
-      button.action();
-      return;
+      return button;
     }
+  }
+  return null;
+}
+
+function handlePointer(x, y) {
+  const button = findUiButton(x, y);
+  if (button) {
+    button.action();
+    return;
   }
 
   if (gameState === STATE.PLAYING) {
@@ -820,20 +1221,76 @@ function handlePointer(x, y) {
   }
 }
 
+canvas.addEventListener("mousemove", (e) => {
+  const { x, y } = getCanvasCoords(e.clientX, e.clientY);
+  canvas.style.cursor = findUiButton(x, y) ? "pointer" : "default";
+});
+
 canvas.addEventListener("mousedown", (e) => {
-  const rect = canvas.getBoundingClientRect();
-  const x = (e.clientX - rect.left) * (W / rect.width);
-  const y = (e.clientY - rect.top) * (H / rect.height);
+  if (e.button !== 0) return;
+  const { x, y } = getCanvasCoords(e.clientX, e.clientY);
   handlePointer(x, y);
 });
 
+// Dukungan layar sentuh HP: mendukung Geser (Swipe kiri/kanan) MAUPUN Tap sisi layar
+const SWIPE_THRESHOLD = 32;
+const touchState = {
+  active: false,
+  startX: 0,
+  startY: 0,
+  swiped: false
+};
+
 canvas.addEventListener("touchstart", (e) => {
   e.preventDefault();
-  const rect = canvas.getBoundingClientRect();
-  const touch = e.touches[0];
-  const x = (touch.clientX - rect.left) * (W / rect.width);
-  const y = (touch.clientY - rect.top) * (H / rect.height);
-  handlePointer(x, y);
+  getAudio(); // Aktifkan audio pada interaksi sentuhan pertama di browser HP
+  const touch = e.changedTouches[0];
+  const { x, y } = getCanvasCoords(touch.clientX, touch.clientY);
+  touchState.active = true;
+  touchState.startX = x;
+  touchState.startY = y;
+  touchState.swiped = false;
 }, { passive: false });
+
+canvas.addEventListener("touchmove", (e) => {
+  e.preventDefault();
+  if (!touchState.active || touchState.swiped || gameState !== STATE.PLAYING) return;
+
+  const touch = e.changedTouches[0];
+  const { x, y } = getCanvasCoords(touch.clientX, touch.clientY);
+  const dx = x - touchState.startX;
+  const dy = y - touchState.startY;
+
+  if (Math.abs(dx) >= SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
+    moveLane(dx > 0 ? 1 : -1);
+    touchState.swiped = true;
+  }
+}, { passive: false });
+
+canvas.addEventListener("touchend", (e) => {
+  e.preventDefault();
+  if (!touchState.active) return;
+
+  const touch = e.changedTouches[0];
+  const { x, y } = getCanvasCoords(touch.clientX, touch.clientY);
+
+  if (!touchState.swiped) {
+    // Jika bukan swipe (hanya tap), cek tombol UI atau tap sisi kiri/kanan layar
+    const btnAtStart = findUiButton(touchState.startX, touchState.startY);
+    if (btnAtStart) {
+      btnAtStart.action();
+    } else {
+      handlePointer(x, y);
+    }
+  }
+
+  touchState.active = false;
+  touchState.swiped = false;
+}, { passive: false });
+
+canvas.addEventListener("touchcancel", () => {
+  touchState.active = false;
+  touchState.swiped = false;
+});
 
 gameLoop();

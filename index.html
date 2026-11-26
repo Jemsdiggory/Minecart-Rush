@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Minecart Rush</title>
 
   <!-- Google Fonts: Rubik & Black Ops One untuk kesan industrial/tambang -->
@@ -14,24 +14,31 @@
 </head>
 
 <body>
-  <header class="topbar">
-    <span class="tag">TAMBANG EMAS BAWAH TANAH</span>
-    <h1>MINECART RUSH</h1>
-  </header>
+  <div class="mine-frame">
+    <header class="topbar">
+      <span class="bolt bolt-tl" aria-hidden="true"></span>
+      <span class="bolt bolt-tr" aria-hidden="true"></span>
+    </header>
 
-  <main class="card">
-    <div class="canvas-container">
-      <canvas id="gameCanvas" width="600" height="800"></canvas>
-    </div>
+    <main class="card">
+      <div class="canvas-container">
+        <canvas id="gameCanvas" width="600" height="800"></canvas>
+      </div>
 
-    <div class="info">
-      <span class="chip">🕹️ Kiri/Kanan atau Sentuh Sisi Layar</span>
-      <span class="chip">M: Mute</span>
-      <span id="message"></span>
-    </div>
+      <div class="info">
+        <span class="chip">👆 Geser / Tap Kiri-Kanan atau ◀ ▶ A/D</span>
+        <span class="chip chip-desktop">P: Pause • M: Suara</span>
+      </div>
 
-    <p class="caption">Kumpulkan Emas 💎, Hindari Batu 🪨 & Rel Rusak 🚧!</p>
-  </main>
+      <p class="caption">
+        <span>Kumpulkan <img src="images/Koin.png" alt="Koin" class="inline-icon"> Koin Emas</span>
+        <span class="sep">•</span>
+        <span>Hindari <img src="images/Obstacle2.png" alt="Batu" class="inline-icon"> Batu &amp; <img src="images/Relrusak.png" alt="Rel Rusak" class="inline-icon"> Rel Rusak!</span>
+      </p>
+      <span class="bolt bolt-bl" aria-hidden="true"></span>
+      <span class="bolt bolt-br" aria-hidden="true"></span>
+    </main>
+  </div>
 
   <script src="game.js"></script>
 </body>
